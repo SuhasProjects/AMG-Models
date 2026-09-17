@@ -281,29 +281,51 @@ def populate_output_sheet(ws, strategy_result):
 
     ws["A13"] = "Phi (φ)"
 
-    # ------------------------------------------------------------------
+    # --------------------------------------------------------------
     # GREEKS
-    # ------------------------------------------------------------------
-    # Individual leg Greeks are displayed as raw per-unit values.
-    # The Total column is already position- and quantity-adjusted
-    # through strategy.py / aggregate_legs().
-    for metric, row in greek_rows.items():
-        ws.cell(row=row, column=2).value = totals.get(metric, 0.0)
+    # --------------------------------------------------------------
+    ws["B7"] = "Total"
 
+    greek_rows = {
+        "delta": 8,
+        "gamma": 9,
+        "vega": 10,
+        "theta": 11,
+        "rho": 12,
+        "phi": 13,
+    }
+
+    # Helper function to scale raw greeks to AMG institutional conventions
+    def _scale_greek(metric, raw_val):
+        metric_lower = metric.lower()
+        if metric_lower == "vega" or metric_lower == "rho":
+            return raw_val / 100.0  # Per 1 percentage point move (1%)
+        elif metric_lower == "theta":
+            return raw_val / 365.0  # Daily time decay
+        return raw_val
+
+    # Populate Total column (Column B) with scaled totals
+    for metric, row in greek_rows.items():
+        raw_total = totals.get(metric, 0.0)
+        ws.cell(row=row, column=2).value = _scale_greek(metric, raw_total)
+
+    # Populate individual leg columns (Columns C:F) with scaled leg greeks
     for i, leg in enumerate(legs[:MAX_LEGS], start=3):
         short_name = _leg_short_name(leg)
 
         # Compact trade label, e.g. "70 SC"
         ws.cell(row=7, column=i).value = short_name
 
-        # Individual Greeks:
-        # Apply long/short sign, but DO NOT apply quantity.
         sign = _position_sign(leg.get("position"))
 
         for metric, row in greek_rows.items():
             raw_value = _safe_float(leg.get(metric))
-            ws.cell(row=row, column=i).value = sign * raw_value
+            scaled_value = _scale_greek(metric, raw_value)
+            ws.cell(row=row, column=i).value = sign * scaled_value
 
+    # --------------------------------------------------------------
+    # PRICING
+    # --------------------------------------------------------------
     # --------------------------------------------------------------
     # PRICING
     # --------------------------------------------------------------
@@ -311,6 +333,17 @@ def populate_output_sheet(ws, strategy_result):
     ws["B18"] = totals.get("price", 0.0)
     ws["B19"] = totals.get("mc_price", 0.0)
     ws["B20"] = strategy_result.get("garch_volatility")
+    
+    # Calculate total actual/Bloomberg price across legs (position & quantity adjusted)
+    total_actual_price = 0.0
+    for leg in legs:
+        sign = _position_sign(leg.get("position"))
+        qty = _safe_float(leg.get("quantity"), 1.0)
+        leg_actual = _safe_float(leg.get("actual_price"))
+        if leg_actual <= 1e-8:
+            leg_actual = _safe_float(leg.get("price"))
+        total_actual_price += sign * qty * leg_actual
+    ws["B21"] = total_actual_price
 
     for i, leg in enumerate(legs[:MAX_LEGS], start=3):
         short_name = _leg_short_name(leg)
@@ -334,6 +367,12 @@ def populate_output_sheet(ws, strategy_result):
             "garch_volatility",
             strategy_result.get("garch_volatility")
         )
+
+        # Individual Actual / Bloomberg Price
+        actual_val = _safe_float(leg.get("actual_price"))
+        if actual_val <= 1e-8:
+            actual_val = _safe_float(leg.get("price"))
+        ws.cell(row=21, column=i).value = actual_val
 
     # Make the total section explicit about the analytical model only
     # when all legs use the same model. Otherwise state that multiple
