@@ -1,0 +1,80 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="row">
+    <div class="col-md-4">
+        <div class="card p-3">
+            <h4>Trade Inputs</h4>
+            <form id="pnlForm">
+                <div class="form-group mb-2">
+                    <label>Asset Class</label>
+                    <select name="asset_class" class="form-select">
+                        <option value="equity">Spot Equity / ETF</option>
+                        <option value="futures">Futures</option>
+                        <option value="fx">FX</option>
+                    </select>
+                </div>
+                <div class="row">
+                    <div class="col-6 form-group mb-2"><label>Type</label><select name="option_type" class="form-select"><option value="call">Call</option><option value="put">Put</option></select></div>
+                    <div class="col-6 form-group mb-2"><label>Position</label><select name="position" class="form-select"><option value="long">Long</option><option value="short">Short</option></select></div>
+                </div>
+                <div class="row">
+                    <div class="col-6 form-group mb-2"><label>Contracts</label><input type="number" name="contracts" class="form-control" value="1"></div>
+                    <div class="col-6 form-group mb-2"><label>Multiplier</label><input type="number" name="multiplier" class="form-control" value="100"></div>
+                </div>
+                <div class="row">
+                    <div class="col-6 form-group mb-2"><label>Spot Price</label><input type="number" name="spot_price" class="form-control" step="any" required></div>
+                    <div class="col-6 form-group mb-2"><label>Strike (K)</label><input type="number" name="K" class="form-control" step="any" required></div>
+                </div>
+                <div class="form-group mb-2">
+                    <label>Bloomberg Price (Bid/Ask)</label>
+                    <input type="number" name="actual_price" class="form-control" step="any" required>
+                </div>
+                <div class="row">
+                    <div class="col-6 form-group mb-2"><label>Rate (r)</label><input type="number" name="r" class="form-control" step="any" value="0.05"></div>
+                    <div class="col-6 form-group mb-2"><label>Yield (q)</label><input type="number" name="q" class="form-control" step="any" value="0"></div>
+                </div>
+                <button type="submit" class="btn btn-primary w-100 mt-3">Calculate PnL</button>
+            </form>
+        </div>
+    </div>
+    <div class="col-md-8">
+        <div class="card p-3">
+            <h4 id="rr-header">Risk/Reward: --</h4>
+            <p id="max-profit" class="mb-1 text-success">Max Profit: --</p>
+            <p id="max-loss" class="mb-3 text-danger">Max Loss: --</p>
+            <div id="pnlChart" style="height: 500px;"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.getElementById('pnlForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const formData = new FormData(e.target);
+    const response = await fetch('/api/pnl', { method: 'POST', body: formData });
+    const data = await response.json();
+
+    document.getElementById('max-profit').innerText = "Max Profit: $" + data.details.max_profit;
+    document.getElementById('max-loss').innerText = "Max Loss: $" + data.details.max_loss;
+    document.getElementById('rr-header').innerText = "Risk/Reward: " + data.details.risk_reward;
+
+    const traceTotal = {
+        x: data.chart.underlying,
+        y: data.chart.total,
+        type: 'scatter',
+        mode: 'lines',
+        name: 'Total PnL',
+        line: { color: '#0d6efd', width: 3 }
+    };
+    
+    const layout = {
+        title: 'Payoff Diagram (Actual Cost Basis)',
+        xaxis: { title: 'Underlying Price at Expiration' },
+        yaxis: { title: 'Profit / Loss ($)' },
+        shapes: [{ type: 'line', x0: Math.min(...data.chart.underlying), x1: Math.max(...data.chart.underlying), y0: 0, y1: 0, line: { color: 'black', width: 1, dash: 'dot' } }]
+    };
+
+    Plotly.newPlot('pnlChart', [traceTotal], layout);
+});
+</script>
+{% endblock %}

@@ -1,0 +1,82 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="row">
+    <div class="col-md-3">
+        <div class="card p-3">
+            <h4>Sandbox Controls</h4>
+            <form id="greekForm">
+                <div class="row">
+                    <div class="col-6 form-group mb-2"><label>Spot</label><input type="number" name="spot_price" class="form-control form-control-sm" step="any" required></div>
+                    <div class="col-6 form-group mb-2"><label>Strike</label><input type="number" name="K" class="form-control form-control-sm" step="any" required></div>
+                </div>
+                <div class="row">
+                    <div class="col-6 form-group mb-2"><label>Type</label><select name="option_type" class="form-select form-select-sm"><option value="call">Call</option><option value="put">Put</option></select></div>
+                    <div class="col-6 form-group mb-2"><label>Pos</label><select name="position" class="form-select form-select-sm"><option value="long">Long</option><option value="short">Short</option></select></div>
+                </div>
+                <div class="form-group mb-2">
+                    <label>Bloomberg Price</label>
+                    <input type="number" name="actual_price" class="form-control form-control-sm" step="any" required>
+                </div>
+                
+                <hr>
+                <label>Time to Expiration (Days): <span id="tteLabel">30</span></label>
+                <input type="range" class="form-range" id="tteSlider" name="tte_days" min="1" max="365" value="30">
+                
+                <hr>
+                <h5>Display Greeks</h5>
+                <div class="form-check"><input class="form-check-input greek-check" type="checkbox" value="delta" checked> <label>Delta</label></div>
+                <div class="form-check"><input class="form-check-input greek-check" type="checkbox" value="gamma" checked> <label>Gamma</label></div>
+                <div class="form-check"><input class="form-check-input greek-check" type="checkbox" value="vega"> <label>Vega (per 1%)</label></div>
+                <div class="form-check"><input class="form-check-input greek-check" type="checkbox" value="theta"> <label>Theta (Daily)</label></div>
+                
+                <button type="submit" class="btn btn-primary w-100 mt-3">Render Sandbox</button>
+            </form>
+        </div>
+    </div>
+    <div class="col-md-9">
+        <div class="card p-3 mb-3"><div id="payoffChart" style="height: 350px;"></div></div>
+        <div class="card p-3"><div id="greekChart" style="height: 350px;"></div></div>
+    </div>
+</div>
+
+<script>
+let currentData = null;
+
+document.getElementById('tteSlider').addEventListener('input', function() {
+    document.getElementById('tteLabel').innerText = this.value;
+    if(currentData) document.getElementById('greekForm').dispatchEvent(new Event('submit'));
+});
+
+document.querySelectorAll('.greek-check').forEach(cb => {
+    cb.addEventListener('change', drawGreeks);
+});
+
+document.getElementById('greekForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const formData = new FormData(e.target);
+    const response = await fetch('/api/greeks', { method: 'POST', body: formData });
+    currentData = await response.json();
+    
+    Plotly.newPlot('payoffChart', [{
+        x: currentData.underlying, y: currentData.payoff, type: 'scatter', name: 'Total PnL', line: {color: '#0d6efd', width: 3}
+    }], { title: 'Dynamic Payoff', margin: {t: 30} });
+
+    drawGreeks();
+});
+
+function drawGreeks() {
+    if (!currentData) return;
+    const traces = [];
+    document.querySelectorAll('.greek-check:checked').forEach(cb => {
+        const greekName = cb.value;
+        traces.push({
+            x: currentData.underlying,
+            y: currentData[greekName],
+            type: 'scatter',
+            name: greekName.charAt(0).toUpperCase() + greekName.slice(1)
+        });
+    });
+    Plotly.newPlot('greekChart', traces, { title: 'Greek Exposures', margin: {t: 30} });
+}
+</script>
+{% endblock %}
