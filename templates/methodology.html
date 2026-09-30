@@ -29,12 +29,12 @@
     <div class="col-lg-10">
         <div class="amg-card p-4 p-md-5 mb-5">
             <h1 class="mb-4" style="color: #001f3f; font-weight: 800;">Engine Methodology</h1>
-            <p class="text-content lead mb-5">The AMG Options Pricing Engine bridges the gap between academic theory and real-world trading. It uses the standard Black-Scholes-Merton model for quick theoretical checks, and a heavy-duty Monte Carlo simulation to account for how volatility actually behaves in live markets.</p>
+            <p class="text-content lead mb-5">The report generator uses the standard Black-Scholes-Merton model to calculate the relevant greeks, and a GARCH-model Monte Carlo simulation to account for how volatility actually behaves in live markets.</p>
 
             <!-- Section 1: BSM -->
             <div class="methodology-section">
                 <h3>1. Black-Scholes-Merton (The Intuition)</h3>
-                <p class="text-content">Black-Scholes-Merton (BSM) is the industry standard for pricing options. While the math looks intimidating, it is essentially just an expected value calculation. It calculates what the option payout will be at expiration, multiplied by the probability of it finishing "in-the-money", and discounts that cash back to today.</p>
+                <p class="text-content">Black-Scholes-Merton (BSM) is the industry standard for pricing options. While the math looks intimidating, it is essentially an expected value calculation. It calculates what the option payout will probably be at expiration multiplied by the probability of it finishing in-the-money, and discounts that cash back to today.</p>
                 
                 <div class="math-block">
                     $$ C = S_0 e^{-qT} N(d_1) - K e^{-rT} N(d_2) $$
@@ -50,11 +50,11 @@
                     </div>
                     <div class="input-card">
                         <h6>2. Strike Price ($K$)</h6>
-                        <p class="text-content mb-0" style="font-size: 0.95rem;"><strong>Logic:</strong> A higher strike price makes a Call option cheaper. Why? Because you have to pay more money to exercise your right to buy the stock.</p>
+                        <p class="text-content mb-0" style="font-size: 0.95rem;"><strong>Logic:</strong> A higher strike price makes a Call option cheaper, since the underlying has to move to a higher price in order to be profitable</p>
                     </div>
                     <div class="input-card">
                         <h6>3. Time to Expiration ($T$)</h6>
-                        <p class="text-content mb-0" style="font-size: 0.95rem;"><strong>Logic:</strong> More time = higher option value. Options are insurance policies. The longer the policy lasts, the more time there is for the stock to make a massive, profitable move.</p>
+                        <p class="text-content mb-0" style="font-size: 0.95rem;"><strong>Logic:</strong> More time = higher option value. The longer the option lasts, the more time there is for the stock to make a massive, profitable move.</p>
                     </div>
                     <div class="input-card">
                         <h6>4. Implied Volatility ($\sigma$)</h6>
@@ -62,7 +62,7 @@
                     </div>
                     <div class="input-card" style="grid-column: 1 / -1;">
                         <h6>5. Risk-Free Rate ($r$)</h6>
-                        <p class="text-content mb-0" style="font-size: 0.95rem;"><strong>Logic:</strong> Buying a Call option is essentially a leveraged stock purchase. You get exposure to the stock today, but don't have to pay the strike price until expiration. If interest rates are high, keeping that cash in the bank to earn interest is very valuable. Therefore, higher rates make Call options slightly more expensive.</p>
+                        <p class="text-content mb-0" style="font-size: 0.95rem;"><strong>Logic:</strong> A Call option allows you to gain exposure to the underlying despite not having to pay the strike price until expiration. If interest rates are high, keeping that cash in the bank to earn interest is very valuable. Therefore, higher rates make Call options slightly more expensive.</p>
                     </div>
                 </div>
             </div>
@@ -76,17 +76,17 @@
                     $$ \sigma_t^2 = \omega + \alpha \epsilon_{t-1}^2 + \beta \sigma_{t-1}^2 $$
                 </div>
                 
-                <p class="text-content">We fix the BSM flaw by using the <strong>GARCH</strong> model. GARCH dynamically updates the volatility forecast every single day by looking at three things: the long-term average ($\omega$), yesterday's market shock ($\alpha$), and yesterday's variance ($\beta$). If the market tanks today, GARCH automatically spikes the volatility for tomorrow.</p>
+                <p class="text-content">This model aims to account for the BSM flaw by using the <strong>GARCH</strong> model. GARCH updates the volatility forecast every single day by looking at three things: the long-term average ($\omega$), yesterday's market shock ($\alpha$), and yesterday's variance ($\beta$). If the market tanks today, GARCH automatically spikes the volatility for tomorrow.</p>
             </div>
 
             <!-- Section 3: Monte Carlo -->
             <div class="methodology-section">
                 <h3>3. Monte Carlo Simulation</h3>
-                <p class="text-content">Because GARCH means our volatility is changing every single day, we can no longer use a simple, closed-form formula like BSM. Instead, we use computational brute force.</p>
+                <p class="text-content">Because GARCH means our volatility is changing every single day, we can no longer use a simple formula like BSM. Instead, we have to simulate the path of the underlying using computers.</p>
                 
-                <p class="text-content">The engine runs a <strong>Monte Carlo simulation</strong>. It generates 10,000 distinct, random future paths for the asset's price between today and expiration. At every single daily step, it injects the shifting GARCH volatility to determine how wildly the stock might move.</p>
+                <p class="text-content">The engine runs a <strong>Monte Carlo simulation</strong>. It generates 10,000 distinct, random future paths for the asset's price between today and expiration. At every single daily step, it uses the estimated GARCH volatility to determine how volatile the stock will likely be on the next day.</p>
                 
-                <p class="text-content">By calculating the exact payout of your multi-leg strategy across all 10,000 alternate realities and averaging the results, we generate a highly accurate, institution-grade theoretical price that accounts for dynamic market conditions.</p>
+                <p class="text-content">By calculating the exact payout of your multi-leg strategy across all 10,000 simulated realities and averaging the results, the model creates a theoretical price that accounts for dynamic market conditions, creating a realistic theoretic value.</p>
             </div>
         </div>
     </div>
