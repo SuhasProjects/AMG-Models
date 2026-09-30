@@ -1,214 +1,202 @@
 {% extends 'base.html' %}
 {% block content %}
-<header class="top-nav">
-    <div class="brand-container">
-        <img src="{{ url_for('static', filename='AMG Logo.jpeg') }}" alt="AMG Logo" class="amg-logo">
-        <h1 class="header-title">Options Pricing Engine</h1>
-    </div>
-</header>
-
-<div class="container">
-    <div class="dashboard-layout">
-        
-        <!-- LEFT COLUMN: Form Inputs -->
-        <div class="input-section">
-            <form method="POST">
-                
-                <div class="card">
-                    <h2>
-                        Historical Data
-                        <span class="tooltip-icon" data-tooltip="Paste Bloomberg daily prices to fit the dynamic GARCH volatility model.">?</span>
-                    </h2>
-                    <div class="form-group">
-                        <label for="historical_data">Date & Last Price Data:</label>
-                        <textarea id="historical_data" name="historical_data" placeholder="Date    Last Price&#10;10/16/2025    61.31&#10;10/15/2025    63.17" required>{{ historical_data }}</textarea>
-                    </div>
-                </div>
-
-                <div class="card">
-                    <h2>
-                        Add Option Leg
-                        <span class="tooltip-icon" data-tooltip="Configure mechanical properties of an individual contract.">?</span>
-                    </h2>
-                    
-                    <div class="form-grid">
-                        <div class="form-group">
-                            <label for="asset_class">Underlying Asset:</label>
-                            <select id="asset_class" name="asset_class">
-                                <option value="equity">Spot Equity / ETF</option>
-                                <option value="futures">Futures</option>
-                                <option value="fx">Foreign Exchange (FX)</option>
-                            </select>
-                        </div>
-
-                        <div class="form-group">
-                            <label for="option_type">Option Type:</label>
-                            <select id="option_type" name="option_type">
-                                <option value="call">Call</option>
-                                <option value="put">Put</option>
-                            </select>
-                        </div>
-
-                        <div class="form-group">
-                            <label for="position">Position:</label>
-                            <select id="position" name="position">
-                                <option value="long">Long</option>
-                                <option value="short">Short</option>
-                            </select>
-                        </div>
-
-                        <div class="row">
-                            <div class="col-md-6 form-group mb-3">
-                                <label>Number of Contracts:</label>
-                                <input type="number" name="contracts" class="form-control" value="1" min="1" required>
-                            </div>
-                            <div class="col-md-6 form-group mb-3">
-                                <label>Contract Size (Multiplier):</label>
-                                <input type="number" name="multiplier" class="form-control" value="100" min="1" required>
-                            </div>
-                        </div>
-
-                        <div class="form-group">
-                            <label for="current_date">Current Date:</label>
-                            <input type="date" id="current_date" name="current_date" required>
-                        </div>
-
-                        <div class="form-group">
-                            <label for="expiration_date">Expiration Date:</label>
-                            <input type="date" id="expiration_date" name="expiration_date" required>
-                        </div>
-
-                        <div class="form-group">
-                            <label for="strike">Strike (K):</label>
-                            <input type="number" id="strike" name="K" step="any" required>
-                        </div>
-
-                        <div class="form-group">
-                            <label for="risk_free_rate">Risk-Free Rate (r):</label>
-                            <input type="number" id="risk_free_rate" name="r" step="any" required>
-                        </div>
-
-                        <div class="form-group" id="foreign_rate_container" style="display: none;">
-                            <label for="foreign_risk_free_rate">Foreign Risk-Free Rate:</label>
-                            <input type="number" id="foreign_risk_free_rate" name="foreign_risk_free_rate" step="0.0001" placeholder="0.04">
-                        </div>
-
-                        <div class="form-group">
-                            <label for="dividend_yield">Dividend Yield (q):</label>
-                            <input type="number" id="dividend_yield" name="q" step="any" value="0" required>
-                        </div>
-
-                        <div class="form-group mb-3">
-                            <label>Bloomberg Price:</label>
-                            <input type="number" name="actual_price" class="form-control" min="0" step="any" required>
-                            <small class="form-text text-muted text-primary">
-                                <strong>Tip:</strong> Enter the Bid price if selling, or the Ask price if buying.
-                            </small>
-                        </div>
-
-                        <div class="form-group">
-                            <label for="volatility_method">Volatility Input:</label>
-                            <select id="volatility_method" name="volatility_method">
-                                <option value="manual">Manual IV Entry</option>
-                                <option value="implied">Solve Implied Volatility</option>
-                            </select>
-                        </div>
-
-                        <div class="form-group" id="manual_iv">
-                            <label for="volatility">Volatility (σ):</label>
-                            <input type="number" id="volatility" name="volatility" step="0.0001" placeholder="0.25" required>
-                        </div>
-
-                        <div class="form-group" id="implied_iv" style="display: none; justify-content: center;">
-                            <p style="font-size: 11px; color: var(--text-muted); line-height: 1.5;">IV is determined by inverting BSM against the Bloomberg price.</p>
-                        </div>
-                    </div>
-
-                    <div class="button-group">
-                        <button type="submit" name="action" value="add_leg" class="btn btn-primary">Add Leg</button>
-                        <button type="submit" name="action" value="done" formnovalidate class="btn btn-secondary">Calculate Strategy</button>
-                        <button type="submit" name="action" value="clear" formnovalidate class="btn btn-danger" onclick="return confirm('Clear all legs from strategy?');">Reset</button>
-                    </div>
-                </div>
-            </form>
-        </div>
-
-        <!-- RIGHT COLUMN: Results & Totals -->
-        <div class="results-section">
+<div class="dashboard-layout">
+    
+    <!-- LEFT COLUMN: Form Inputs -->
+    <div class="input-section">
+        <form method="POST">
             
-            {% if error %}
-                <div class="card" style="border-left: 4px solid #b91c1c;">
-                    <h3 style="color: #b91c1c;">Processing Error</h3>
-                    <p style="font-size: 13px; color: #444;">{{ error }}</p>
+            <div class="card">
+                <h2>
+                    Historical Data
+                    <span class="tooltip-icon" data-tooltip="Paste Bloomberg daily prices to fit the dynamic GARCH volatility model.">?</span>
+                </h2>
+                <div class="form-group">
+                    <label for="historical_data">Date & Last Price Data:</label>
+                    <textarea id="historical_data" name="historical_data" placeholder="Date    Last Price&#10;10/16/2025    61.31&#10;10/15/2025    63.17" required>{{ historical_data }}</textarea>
                 </div>
-            {% endif %}
+            </div>
 
-            {% if report_ready %}
-                <div class="card" style="text-align: center; border: 1px dashed var(--amg-navy);">
-                    <h2>Report Ready</h2>
-                    <a href="{{ url_for('download_report') }}" class="btn btn-primary" style="margin-top: 10px;">Download Excel Workbook</a>
-                </div>
-            {% endif %}
-
-            {% if totals is not none %}
-                <div class="card card-slate">
-                    <h2>
-                        Strategy Totals
-                        <span class="tooltip-icon" data-tooltip="Aggregated net Greeks and theoretical pricing." style="background-color: rgba(255,255,255,0.3); color: #fff;">?</span>
-                    </h2>
-                    
-                    <div class="data-grid" style="margin-top: 18px;">
-                        <div class="data-item totals-item"><div class="data-label">Theo Value</div><div class="data-value">{{ "%.3f"|format(totals["price"]|float) }}</div></div>
-                        <div class="data-item totals-item"><div class="data-label">Net Delta (δ)</div><div class="data-value">{{ "%.3f"|format(totals["delta"]|float) }}</div></div>
-                        <div class="data-item totals-item"><div class="data-label">Net Gamma (γ)</div><div class="data-value">{{ "%.3f"|format(totals["gamma"]|float) }}</div></div>
-                        <div class="data-item totals-item"><div class="data-label">Net Vega (ν)</div><div class="data-value">{{ "%.3f"|format(totals["vega"]|float) }}</div></div>
-                        <div class="data-item totals-item"><div class="data-label">Net Theta (θ)</div><div class="data-value">{{ "%.3f"|format(totals["theta"]|float) }}</div></div>
+            <div class="card">
+                <h2>
+                    Add Option Leg
+                    <span class="tooltip-icon" data-tooltip="Configure mechanical properties of an individual contract.">?</span>
+                </h2>
+                
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="asset_class">Underlying Asset:</label>
+                        <select id="asset_class" name="asset_class">
+                            <option value="equity">Spot Equity / ETF</option>
+                            <option value="futures">Futures</option>
+                            <option value="fx">Foreign Exchange (FX)</option>
+                        </select>
                     </div>
 
-                    <form method="POST" style="margin-top: 24px; text-align: center;">
-                        <textarea name="historical_data" style="display:none;">{{ historical_data }}</textarea>
-                        <button type="submit" name="action" value="generate" class="btn btn-primary" style="background-color: var(--amg-navy); width: 100%;">Generate Excel Report</button>
-                    </form>
-                </div>
-            {% endif %}
+                    <div class="form-group">
+                        <label for="option_type">Option Type:</label>
+                        <select id="option_type" name="option_type">
+                            <option value="call">Call</option>
+                            <option value="put">Put</option>
+                        </select>
+                    </div>
 
-            {% if session["legs"] %}
-                <div class="card">
-                    <h2>
-                        Active Structure ({{ session["legs"]|length }} Legs)
-                        <span class="tooltip-icon" data-tooltip="Individual leg analytical parameters.">?</span>
-                    </h2>
+                    <div class="form-group">
+                        <label for="position">Position:</label>
+                        <select id="position" name="position">
+                            <option value="long">Long</option>
+                            <option value="short">Short</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Number of Contracts:</label>
+                        <input type="number" name="contracts" value="1" min="1" required>
+                    </div>
                     
-                    {% for leg in session["legs"] %}
-                        <div style="margin-top: 24px;">
-                            <h3>Leg {{ loop.index }}: {{ leg["contracts"] }}x (Size: {{ leg["multiplier"] }})x {{ leg["position"]|title }} {{ leg["option_type"]|title }}</h3>
-                            
-                            <div class="data-grid">
-                                <div class="data-item"><div class="data-label">Asset</div><div class="data-value">{{ leg["asset_class"]|title }}</div></div>
-                                <div class="data-item"><div class="data-label">Spot (S)</div><div class="data-value">{{ "%.3f"|format(leg["S"]|float) }}</div></div>
-                                <div class="data-item"><div class="data-label">Strike (K)</div><div class="data-value">{{ "%.3f"|format(leg["K"]|float) }}</div></div>
-                                <div class="data-item"><div class="data-label">Tenor (T)</div><div class="data-value">{{ "%.3f"|format(leg["T"]|float) }}</div></div>
-                                <div class="data-item"><div class="data-label">Rate (r)</div><div class="data-value">{{ "%.3f"|format(leg["risk_free_rate"]|float) }}</div></div>
-                                <div class="data-item"><div class="data-label">Vol (σ)</div><div class="data-value">{{ "%.3f"|format(leg["sigma"]|float) }}</div></div>
-                                <div class="data-item"><div class="data-label">Mkt Price</div><div class="data-value">{{ "%.3f"|format(leg["actual_price"]|float) }}</div></div>
-                            </div>
+                    <div class="form-group">
+                        <label>Contract Size (Multiplier):</label>
+                        <input type="number" name="multiplier" value="100" min="1" required>
+                    </div>
 
-                            <h4>Pricing & Greeks ({{ leg["model"] }})</h4>
-                            <div class="data-grid">
-                                <div class="data-item"><div class="data-label">Theo Price</div><div class="data-value">{{ "%.3f"|format(leg["price"]|float) }}</div></div>
-                                <div class="data-item"><div class="data-label">Delta (δ)</div><div class="data-value">{{ "%.3f"|format(leg["delta"]|float) }}</div></div>
-                                <div class="data-item"><div class="data-label">Gamma (γ)</div><div class="data-value">{{ "%.3f"|format(leg["gamma"]|float) }}</div></div>
-                                <div class="data-item"><div class="data-label">Vega (ν)</div><div class="data-value">{{ "%.3f"|format(leg["vega"]|float) }}</div></div>
-                                <div class="data-item"><div class="data-label">Theta (θ)</div><div class="data-value">{{ "%.3f"|format(leg["theta"]|float) }}</div></div>
-                                <div class="data-item"><div class="data-label">Rho (ρ)</div><div class="data-value">{{ "%.3f"|format(leg["rho"]|float) }}</div></div>
-                            </div>
-                        </div>
-                        {% if not loop.last %}<hr>{% endif %}
-                    {% endfor %}
+                    <div class="form-group">
+                        <label for="current_date">Current Date:</label>
+                        <input type="date" id="current_date" name="current_date" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="expiration_date">Expiration Date:</label>
+                        <input type="date" id="expiration_date" name="expiration_date" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="strike">Strike (K):</label>
+                        <input type="number" id="strike" name="K" step="any" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="risk_free_rate">Risk-Free Rate (r):</label>
+                        <input type="number" id="risk_free_rate" name="r" step="any" required>
+                    </div>
+
+                    <div class="form-group" id="foreign_rate_container" style="display: none;">
+                        <label for="foreign_risk_free_rate">Foreign Risk-Free Rate:</label>
+                        <input type="number" id="foreign_risk_free_rate" name="foreign_risk_free_rate" step="0.0001" placeholder="0.04">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="dividend_yield">Dividend Yield (q):</label>
+                        <input type="number" id="dividend_yield" name="q" step="any" value="0" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Bloomberg Price:</label>
+                        <input type="number" name="actual_price" min="0" step="any" required>
+                        <small style="font-size: 10px; color: var(--amg-navy); margin-top: 4px;">Enter Bid if selling, Ask if buying.</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="volatility_method">Volatility Input:</label>
+                        <select id="volatility_method" name="volatility_method">
+                            <option value="manual">Manual IV Entry</option>
+                            <option value="implied">Solve Implied Volatility</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group" id="manual_iv">
+                        <label for="volatility">Volatility (σ):</label>
+                        <input type="number" id="volatility" name="volatility" step="0.0001" placeholder="0.25" required>
+                    </div>
+
+                    <div class="form-group" id="implied_iv" style="display: none; justify-content: center;">
+                        <p style="font-size: 11px; color: var(--text-muted); line-height: 1.5;">IV is determined by inverting BSM against the Bloomberg price.</p>
+                    </div>
                 </div>
-            {% endif %}
 
-        </div>
+                <div class="button-group">
+                    <button type="submit" name="action" value="add_leg" class="btn btn-primary">Add Leg</button>
+                    <button type="submit" name="action" value="done" formnovalidate class="btn btn-secondary">Calculate Strategy</button>
+                    <button type="submit" name="action" value="clear" formnovalidate class="btn btn-danger" onclick="return confirm('Clear all legs from strategy?');">Reset</button>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- RIGHT COLUMN: Results & Totals -->
+    <div class="results-section">
+        
+        {% if error %}
+            <div class="card" style="border-left: 4px solid #b91c1c;">
+                <h3 style="color: #b91c1c;">Processing Error</h3>
+                <p style="font-size: 13px; color: #444;">{{ error }}</p>
+            </div>
+        {% endif %}
+
+        {% if report_ready %}
+            <div class="card" style="text-align: center; border: 1px dashed var(--amg-navy);">
+                <h2>Report Ready</h2>
+                <a href="{{ url_for('download_report') }}" class="btn btn-primary" style="margin-top: 10px;">Download Excel Workbook</a>
+            </div>
+        {% endif %}
+
+        {% if totals is not none %}
+            <div class="card card-slate">
+                <h2>
+                    Strategy Totals
+                    <span class="tooltip-icon" data-tooltip="Aggregated net Greeks and theoretical pricing." style="background-color: rgba(255,255,255,0.3); color: #fff;">?</span>
+                </h2>
+                
+                <div class="data-grid" style="margin-top: 18px;">
+                    <div class="data-item totals-item"><div class="data-label">Theo Value</div><div class="data-value">{{ "%.3f"|format(totals["price"]|float) }}</div></div>
+                    <div class="data-item totals-item"><div class="data-label">Net Delta (δ)</div><div class="data-value">{{ "%.3f"|format(totals["delta"]|float) }}</div></div>
+                    <div class="data-item totals-item"><div class="data-label">Net Gamma (γ)</div><div class="data-value">{{ "%.3f"|format(totals["gamma"]|float) }}</div></div>
+                    <div class="data-item totals-item"><div class="data-label">Net Vega (ν)</div><div class="data-value">{{ "%.3f"|format(totals["vega"]|float) }}</div></div>
+                    <div class="data-item totals-item"><div class="data-label">Net Theta (θ)</div><div class="data-value">{{ "%.3f"|format(totals["theta"]|float) }}</div></div>
+                </div>
+
+                <form method="POST" style="margin-top: 24px; text-align: center;">
+                    <textarea name="historical_data" style="display:none;">{{ historical_data }}</textarea>
+                    <button type="submit" name="action" value="generate" class="btn btn-primary" style="background-color: var(--amg-navy); width: 100%;">Generate Excel Report</button>
+                </form>
+            </div>
+        {% endif %}
+
+        {% if session["legs"] %}
+            <div class="card">
+                <h2>
+                    Active Structure ({{ session["legs"]|length }} Legs)
+                    <span class="tooltip-icon" data-tooltip="Individual leg analytical parameters.">?</span>
+                </h2>
+                
+                {% for leg in session["legs"] %}
+                    <div style="margin-top: 24px;">
+                        <h3>Leg {{ loop.index }}: {{ leg["contracts"] }}x (Size: {{ leg["multiplier"] }})x {{ leg["position"]|title }} {{ leg["option_type"]|title }}</h3>
+                        
+                        <div class="data-grid">
+                            <div class="data-item"><div class="data-label">Asset</div><div class="data-value">{{ leg["asset_class"]|title }}</div></div>
+                            <div class="data-item"><div class="data-label">Spot (S)</div><div class="data-value">{{ "%.3f"|format(leg["S"]|float) }}</div></div>
+                            <div class="data-item"><div class="data-label">Strike (K)</div><div class="data-value">{{ "%.3f"|format(leg["K"]|float) }}</div></div>
+                            <div class="data-item"><div class="data-label">Tenor (T)</div><div class="data-value">{{ "%.3f"|format(leg["T"]|float) }}</div></div>
+                            <div class="data-item"><div class="data-label">Rate (r)</div><div class="data-value">{{ "%.3f"|format(leg["risk_free_rate"]|float) }}</div></div>
+                            <div class="data-item"><div class="data-label">Vol (σ)</div><div class="data-value">{{ "%.3f"|format(leg["sigma"]|float) }}</div></div>
+                            <div class="data-item"><div class="data-label">Mkt Price</div><div class="data-value">{{ "%.3f"|format(leg["actual_price"]|float) }}</div></div>
+                        </div>
+
+                        <h4>Pricing & Greeks ({{ leg["model"] }})</h4>
+                        <div class="data-grid">
+                            <div class="data-item"><div class="data-label">Theo Price</div><div class="data-value">{{ "%.3f"|format(leg["price"]|float) }}</div></div>
+                            <div class="data-item"><div class="data-label">Delta (δ)</div><div class="data-value">{{ "%.3f"|format(leg["delta"]|float) }}</div></div>
+                            <div class="data-item"><div class="data-label">Gamma (γ)</div><div class="data-value">{{ "%.3f"|format(leg["gamma"]|float) }}</div></div>
+                            <div class="data-item"><div class="data-label">Vega (ν)</div><div class="data-value">{{ "%.3f"|format(leg["vega"]|float) }}</div></div>
+                            <div class="data-item"><div class="data-label">Theta (θ)</div><div class="data-value">{{ "%.3f"|format(leg["theta"]|float) }}</div></div>
+                            <div class="data-item"><div class="data-label">Rho (ρ)</div><div class="data-value">{{ "%.3f"|format(leg["rho"]|float) }}</div></div>
+                        </div>
+                    </div>
+                    {% if not loop.last %}<hr>{% endif %}
+                {% endfor %}
+            </div>
+        {% endif %}
+
     </div>
 </div>
 

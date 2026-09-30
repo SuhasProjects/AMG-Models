@@ -1,80 +1,170 @@
 {% extends 'base.html' %}
 {% block content %}
-<div class="row">
-    <div class="col-md-4">
-        <div class="card p-3">
-            <h4>Trade Inputs</h4>
-            <form id="pnlForm">
-                <div class="form-group mb-2">
-                    <label>Asset Class</label>
-                    <select name="asset_class" class="form-select">
-                        <option value="equity">Spot Equity / ETF</option>
-                        <option value="futures">Futures</option>
-                        <option value="fx">FX</option>
-                    </select>
-                </div>
-                <div class="row">
-                    <div class="col-6 form-group mb-2"><label>Type</label><select name="option_type" class="form-select"><option value="call">Call</option><option value="put">Put</option></select></div>
-                    <div class="col-6 form-group mb-2"><label>Position</label><select name="position" class="form-select"><option value="long">Long</option><option value="short">Short</option></select></div>
-                </div>
-                <div class="row">
-                    <div class="col-6 form-group mb-2"><label>Contracts</label><input type="number" name="contracts" class="form-control" value="1"></div>
-                    <div class="col-6 form-group mb-2"><label>Multiplier</label><input type="number" name="multiplier" class="form-control" value="100"></div>
-                </div>
-                <div class="row">
-                    <div class="col-6 form-group mb-2"><label>Spot Price</label><input type="number" name="spot_price" class="form-control" step="any" required></div>
-                    <div class="col-6 form-group mb-2"><label>Strike (K)</label><input type="number" name="K" class="form-control" step="any" required></div>
-                </div>
-                <div class="form-group mb-2">
-                    <label>Bloomberg Price (Bid/Ask)</label>
-                    <input type="number" name="actual_price" class="form-control" step="any" required>
-                </div>
-                <div class="row">
-                    <div class="col-6 form-group mb-2"><label>Rate (r)</label><input type="number" name="r" class="form-control" step="any" value="0.05"></div>
-                    <div class="col-6 form-group mb-2"><label>Yield (q)</label><input type="number" name="q" class="form-control" step="any" value="0"></div>
-                </div>
-                <button type="submit" class="btn btn-primary w-100 mt-3">Calculate PnL</button>
-            </form>
+<div class="dashboard-layout">
+    <!-- Left Side: Controls -->
+    <div class="input-section">
+        <div class="card">
+            <h2>Global Environment</h2>
+            <div class="form-group">
+                <label>Current Spot Price:</label>
+                <input type="number" id="global_spot" step="any" placeholder="e.g. 100.00" onchange="triggerCalc()">
+            </div>
+        </div>
+
+        <div class="card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 22px;">
+                <h2 style="margin-bottom: 0;">Strategy Legs</h2>
+                <button type="button" class="btn btn-primary" style="padding: 8px 16px;" onclick="addEmptyLeg()">+ Add Leg</button>
+            </div>
+            
+            <div id="activeLegsContainer" style="display: flex; flex-direction: column; gap: 15px;">
+                <!-- Editable legs will render here -->
+            </div>
         </div>
     </div>
-    <div class="col-md-8">
-        <div class="card p-3">
-            <h4 id="rr-header">Risk/Reward: --</h4>
-            <p id="max-profit" class="mb-1 text-success">Max Profit: --</p>
-            <p id="max-loss" class="mb-3 text-danger">Max Loss: --</p>
-            <div id="pnlChart" style="height: 500px;"></div>
+    
+    <!-- Right Side: Chart & Metrics -->
+    <div class="results-section">
+        <div class="card" style="height: 100%;">
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-gray); padding-bottom: 15px; margin-bottom: 15px;">
+                <h2 id="rr-header" style="margin-bottom: 0; color: var(--amg-navy);">Risk/Reward: --</h2>
+                <div style="text-align: right;">
+                    <span id="max-profit" style="display: block; font-size: 13px; font-weight: 700; color: #10b981; margin-bottom: 4px;">Max Profit: --</span>
+                    <span id="max-loss" style="display: block; font-size: 13px; font-weight: 700; color: #ef4444;">Max Loss: --</span>
+                </div>
+            </div>
+            <div id="pnlChart" style="height: 550px; width: 100%;"></div>
         </div>
     </div>
 </div>
 
 <script>
-document.getElementById('pnlForm').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const formData = new FormData(e.target);
-    const response = await fetch('/api/pnl', { method: 'POST', body: formData });
+let activeLegs = [];
+let debounceTimer;
+
+function addEmptyLeg() {
+    const defaultSpot = document.getElementById('global_spot').value || 100;
+    activeLegs.push({ position: 'long', option_type: 'call', K: parseFloat(defaultSpot), actual_price: 1.50, contracts: 1, multiplier: 100 });
+    renderLegs();
+}
+
+function updateLeg(index, field, value) {
+    activeLegs[index][field] = value;
+    triggerCalc();
+}
+
+function removeLeg(index) {
+    activeLegs.splice(index, 1);
+    renderLegs();
+}
+
+function renderLegs() {
+    const container = document.getElementById('activeLegsContainer');
+    if (activeLegs.length === 0) {
+        container.innerHTML = '<div style="text-align: center; font-size: 12px; color: var(--text-muted); padding: 20px 0;">Click "+ Add Leg" to start building a structure.</div>';
+        Plotly.purge('pnlChart');
+        document.getElementById('max-profit').innerText = "Max Profit: --";
+        document.getElementById('max-loss').innerText = "Max Loss: --";
+        document.getElementById('rr-header').innerText = "Risk/Reward: --";
+        return;
+    }
+
+    let html = '';
+    activeLegs.forEach((leg, i) => {
+        html += `
+        <div style="background: #f8fafc; border: 1px solid var(--border-gray); padding: 15px; border-radius: 3px;">
+            <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+                <div class="form-group" style="flex: 1; margin: 0;">
+                    <select onchange="updateLeg(${i}, 'position', this.value)" style="padding: 8px;">
+                        <option value="long" ${leg.position==='long'?'selected':''}>Buy</option>
+                        <option value="short" ${leg.position==='short'?'selected':''}>Sell</option>
+                    </select>
+                </div>
+                <div class="form-group" style="flex: 1; margin: 0;">
+                    <select onchange="updateLeg(${i}, 'option_type', this.value)" style="padding: 8px;">
+                        <option value="call" ${leg.option_type==='call'?'selected':''}>Call</option>
+                        <option value="put" ${leg.option_type==='put'?'selected':''}>Put</option>
+                    </select>
+                </div>
+                <button class="btn btn-danger" style="padding: 8px 12px;" onclick="removeLeg(${i})">✕</button>
+            </div>
+            
+            <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+                <div class="form-group" style="flex: 1; margin: 0;">
+                    <label style="font-size: 9px;">Strike</label>
+                    <input type="number" value="${leg.K}" onchange="updateLeg(${i}, 'K', this.value)" style="padding: 8px;">
+                </div>
+                <div class="form-group" style="flex: 1; margin: 0;">
+                    <label style="font-size: 9px;">Price</label>
+                    <input type="number" value="${leg.actual_price}" step="any" onchange="updateLeg(${i}, 'actual_price', this.value)" style="padding: 8px;">
+                </div>
+            </div>
+            
+            <div style="display: flex; gap: 10px;">
+                <div class="form-group" style="flex: 1; margin: 0;">
+                    <label style="font-size: 9px;">Qty</label>
+                    <input type="number" value="${leg.contracts}" onchange="updateLeg(${i}, 'contracts', this.value)" style="padding: 8px;">
+                </div>
+                <div class="form-group" style="flex: 1; margin: 0;">
+                    <label style="font-size: 9px;">Size</label>
+                    <input type="number" value="${leg.multiplier}" onchange="updateLeg(${i}, 'multiplier', this.value)" style="padding: 8px;">
+                </div>
+            </div>
+        </div>`;
+    });
+    container.innerHTML = html;
+    triggerCalc();
+}
+
+function triggerCalc() {
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(calculatePnL, 250);
+}
+
+async function calculatePnL() {
+    if (activeLegs.length === 0) return;
+    
+    const spotInput = document.getElementById('global_spot').value;
+    const spot = spotInput ? parseFloat(spotInput) : activeLegs[0].K; 
+    
+    const payload = {
+        spot_price: spot,
+        tte_days: 30, 
+        legs: activeLegs.map(l => ({ ...l, asset_class: 'equity', r: 0.05, q: 0, volatility_method: 'manual', volatility: 0.2 }))
+    };
+
+    const response = await fetch('/api/pnl', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
     const data = await response.json();
+    if (!data.chart) return;
 
     document.getElementById('max-profit').innerText = "Max Profit: $" + data.details.max_profit;
     document.getElementById('max-loss').innerText = "Max Loss: $" + data.details.max_loss;
     document.getElementById('rr-header').innerText = "Risk/Reward: " + data.details.risk_reward;
 
+    // Apply AMG Color Codes
     const traceTotal = {
         x: data.chart.underlying,
         y: data.chart.total,
         type: 'scatter',
         mode: 'lines',
-        name: 'Total PnL',
-        line: { color: '#0d6efd', width: 3 }
+        name: 'Total Net PnL',
+        line: { color: 'rgb(31, 78, 120)', width: 3 }, // Primary Blue[cite: 6]
+        fill: 'tozeroy',
+        fillcolor: 'rgba(31, 78, 120, 0.1)'
     };
     
     const layout = {
-        title: 'Payoff Diagram (Actual Cost Basis)',
-        xaxis: { title: 'Underlying Price at Expiration' },
-        yaxis: { title: 'Profit / Loss ($)' },
-        shapes: [{ type: 'line', x0: Math.min(...data.chart.underlying), x1: Math.max(...data.chart.underlying), y0: 0, y1: 0, line: { color: 'black', width: 1, dash: 'dot' } }]
+        title: { text: 'Payoff Profile at Expiration', font: { size: 16, color: '#111', family: 'Montserrat, sans-serif' } },
+        xaxis: { title: 'Underlying Price', gridcolor: 'rgb(192, 192, 192)', zeroline: false }, // Subheader Gray grid[cite: 6]
+        yaxis: { title: 'Net Profit / Loss ($)', gridcolor: 'rgb(192, 192, 192)', zeroline: true, zerolinecolor: 'rgb(117, 113, 113)', zerolinewidth: 2 }, // Header Gray zero line[cite: 6]
+        plot_bgcolor: 'white', paper_bgcolor: 'white',
+        margin: { t: 50, b: 50, l: 60, r: 30 }, hovermode: 'x unified',
+        shapes: [{ type: 'line', x0: spot, x1: spot, y0: 0, y1: 1, yref: 'paper', line: { color: 'rgb(117, 113, 113)', dash: 'dash' } }] // Header Gray dot[cite: 6]
     };
 
-    Plotly.newPlot('pnlChart', [traceTotal], layout);
-});
+    Plotly.newPlot('pnlChart', [traceTotal], layout, {responsive: true});
+}
+
+addEmptyLeg();
 </script>
 {% endblock %}

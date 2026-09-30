@@ -217,58 +217,76 @@ def home():
 @app.route('/pnl')
 def pnl_page():
     return render_template('pnl.html')
-
 @app.route('/greeks')
 def greeks_page():
     return render_template('greeks.html')
+@app.route('/methodology')
+def methodology_page():
+    return render_template('methodology.html')
 
-def _parse_sandbox_leg(form):
-    """Helper to parse a leg without requiring historical data."""
-    asset_class = form.get("asset_class", "equity")
-    S = float(form.get("spot_price", 100))
-    K = float(form.get("K", 100))
-    r = float(form.get("r", 0.05))
-    q = float(form.get("q", 0))
-    option_type = form.get("option_type", "call")
-    position = form.get("position", "long")
-    contracts = int(form.get("contracts", 1))
-    multiplier = float(form.get("multiplier", 100))
-    quantity = contracts * multiplier
-    actual_price = float(form.get("actual_price", 0))
+def _safe_float(value, default=0.0):
+    """Safely cast empty strings or partial inputs to a float without crashing."""
+    if value is None or str(value).strip() == "":
+        return default
+    try:
+        return float(value)
+    except ValueError:
+        return default
+
+def _parse_sandbox_leg_dict(data, global_spot, global_tte=30):
+    """Helper to parse a leg from JSON without requiring historical data."""
+    asset_class = data.get("asset_class", "equity")
+    K = _safe_float(data.get("K"), 100.0)
+    r = _safe_float(data.get("r"), 0.05)
+    q = _safe_float(data.get("q"), 0.0)
+    option_type = data.get("option_type", "call")
+    position = data.get("position", "long")
     
-    # Handle dynamic TTE from slider, fallback to 30 days
-    tte_days = float(form.get("tte_days", 30))
-    T = max(1, tte_days) / 365.0 
+    contracts = int(_safe_float(data.get("contracts"), 1))
+    multiplier = _safe_float(data.get("multiplier"), 100.0)
+    quantity = contracts * multiplier
+    
+    actual_price = _safe_float(data.get("actual_price"), 0.0)
+    
+    T = max(1, _safe_float(global_tte, 30)) / 365.0 
+    rf = _safe_float(data.get("foreign_risk_free_rate"), 0.0) if asset_class == "fx" else None
 
-    rf = float(form.get("foreign_risk_free_rate", 0)) if asset_class == "fx" else None
-
-    # Handle Volatility
-    volatility_method = form.get("volatility_method", "manual")
+    volatility_method = data.get("volatility_method", "manual")
     iv_q = rf if asset_class == "fx" else (r if asset_class == "futures" else q)
     
     if volatility_method == "manual":
-        sigma = float(form.get("volatility", 0.2))
+        sigma = _safe_float(data.get("volatility"), 0.2)
     else:
-        sigma = get_implied_volatility(actual_price, S, K, T, r, iv_q, option_type)
+        try:
+            # If the user is mid-typing, IV might fail to converge, so we use a try/except
+            sigma = get_implied_volatility(actual_price, global_spot, K, T, r, iv_q, option_type)
+        except:
+            sigma = 0.2 
 
     leg = create_leg(
-        asset_class=asset_class, S=S, K=K, current_date="2025-01-01", 
+        asset_class=asset_class, S=global_spot, K=K, current_date="2025-01-01", 
         expiration_date="2025-01-31", r=r, q=q, sigma=sigma, 
         option_type=option_type, position=position, quantity=quantity, 
         rf=rf, actual_price=actual_price
     )
-    leg["T"] = T # Override with exact slider TTE
-    
+    leg["T"] = T # Override with exact TTE
     return price_leg(leg)
 
 
 @app.route('/api/pnl', methods=['POST'])
 def api_pnl():
-    leg = _parse_sandbox_leg(request.form)
-    spot = float(request.form.get("spot_price", 100))
+    req = request.json
+    spot = float(req.get("spot_price", 100))
+    tte_days = float(req.get("tte_days", 30))
+    raw_legs = req.get("legs", [])
     
-    chart_start, chart_step, rows = generate_payoff_data(spot, [leg])
-    details = calculate_trade_details([leg])
+    parsed_legs = [_parse_sandbox_leg_dict(l, spot, tte_days) for l in raw_legs]
+    
+    if not parsed_legs:
+        return jsonify({"error": "No legs provided."}), 400
+
+    chart_start, chart_step, rows = generate_payoff_data(spot, parsed_legs)
+    details = calculate_trade_details(parsed_legs)
     
     chart_data = {
         "underlying": [r["underlying"] for r in rows],
@@ -276,40 +294,99 @@ def api_pnl():
     }
     return jsonify({"chart": chart_data, "details": details})
 
-
 @app.route('/api/greeks', methods=['POST'])
 def api_greeks():
-    leg = _parse_sandbox_leg(request.form)
-    spot = float(request.form.get("spot_price", 100))
-    tte_days = float(request.form.get("tte_days", 30))
+    req = request.json
+    spot = float(req.get("spot_price", 100))
+    tte_days = float(req.get("tte_days", 30))
+    raw_legs = req.get("legs", [])
     
-    chart_start, chart_step = calculate_chart_range(spot, [leg], points=50)
+    parsed_legs = [_parse_sandbox_leg_dict(l, spot, tte_days) for l in raw_legs]
+
+    if not parsed_legs:
+        return jsonify({"error": "No legs provided."}), 400
+    
+    chart_start, chart_step = calculate_chart_range(spot, parsed_legs, points=100)
     
     results = {
-        'underlying': [], 'payoff': [], 
-        'delta': [], 'gamma': [], 'vega': [], 'theta': [], 'rho': []
+        'chart': {
+            'underlying': [], 'payoff_exp': [], 'pnl_tte': [], 
+            'delta': [], 'gamma': [], 'vega': [], 'theta': [], 'rho': []
+        },
+        'aggregates': {},
+        'legs': []
     }
     
-    for i in range(50):
-        current_spot = chart_start + i * chart_step
-        results['underlying'].append(current_spot)
-        
-        temp_leg = copy.deepcopy(leg)
-        temp_leg['S'] = current_spot
-        temp_leg['T'] = max(1, tte_days) / 365.0 
-        
+    # --- Calculate Current State (Top Bar Aggregates & Table Details) ---
+    current_priced_legs = []
+    initial_cost = 0
+    for l in parsed_legs:
+        temp_l = copy.deepcopy(l)
+        temp_l['S'] = spot
+        temp_l['T'] = max(1, tte_days) / 365.0
         try:
-            priced_leg = price_leg(temp_leg)
-            payoff_total = _leg_pnl(current_spot, priced_leg)
-            
-            results['payoff'].append(payoff_total)
-            results['delta'].append(priced_leg.get('delta', 0))
-            results['gamma'].append(priced_leg.get('gamma', 0))
-            results['vega'].append(priced_leg.get('vega', 0) / 100.0) # AMG Scaling
-            results['theta'].append(priced_leg.get('theta', 0) / 365.0) # AMG Scaling
-            results['rho'].append(priced_leg.get('rho', 0) / 100.0) # AMG Scaling
+            p_leg = price_leg(temp_l)
+            current_priced_legs.append(p_leg)
+            # Track cost basis: Price * Qty * Sign
+            qty = p_leg.get("quantity", 1)
+            sign = 1 if p_leg.get("position") == "long" else -1
+            initial_cost += p_leg.get("actual_price", 0) * qty * sign
         except:
             pass
+            
+    current_totals = aggregate_legs(current_priced_legs)
+    
+    results['aggregates'] = {
+        'delta': current_totals.get('delta', 0),
+        'gamma': current_totals.get('gamma', 0),
+        'vega': current_totals.get('vega', 0) / 100.0,
+        'theta': current_totals.get('theta', 0) / 365.0,
+        'rho': current_totals.get('rho', 0) / 100.0,
+        'theor': current_totals.get('price', 0),
+        'cost': initial_cost
+    }
+    
+    for leg in current_priced_legs:
+        results['legs'].append({
+            'iv': leg.get('sigma', 0) * 100, # Display as percentage
+            'theor': leg.get('price', 0),
+            'delta': leg.get('delta', 0),
+            'gamma': leg.get('gamma', 0),
+            'vega': leg.get('vega', 0) / 100.0,
+            'theta': leg.get('theta', 0) / 365.0,
+            'rho': leg.get('rho', 0) / 100.0
+        })
+        
+    # --- Calculate Chart Arrays (The 100-point curve) ---
+    for i in range(100):
+        current_spot = chart_start + i * chart_step
+        results['chart']['underlying'].append(current_spot)
+        
+        priced_legs = []
+        theo_value_tte = 0
+        for leg in parsed_legs:
+            temp_leg = copy.deepcopy(leg)
+            temp_leg['S'] = current_spot
+            temp_leg['T'] = max(1, tte_days) / 365.0 
+            try:
+                p_leg = price_leg(temp_leg)
+                priced_legs.append(p_leg)
+                qty = p_leg.get("quantity", 1)
+                sign = 1 if p_leg.get("position") == "long" else -1
+                theo_value_tte += p_leg.get("price", 0) * qty * sign
+            except:
+                pass
+        
+        totals = aggregate_legs(priced_legs)
+        payoff_exp = sum(_leg_pnl(current_spot, l) for l in priced_legs)
+        
+        results['chart']['payoff_exp'].append(payoff_exp)
+        results['chart']['pnl_tte'].append(theo_value_tte - initial_cost)
+        results['chart']['delta'].append(totals.get('delta', 0))
+        results['chart']['gamma'].append(totals.get('gamma', 0))
+        results['chart']['vega'].append(totals.get('vega', 0) / 100.0) 
+        results['chart']['theta'].append(totals.get('theta', 0) / 365.0) 
+        results['chart']['rho'].append(totals.get('rho', 0) / 100.0) 
             
     return jsonify(results)
 

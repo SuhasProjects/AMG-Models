@@ -1,82 +1,220 @@
 {% extends 'base.html' %}
 {% block content %}
-<div class="row">
-    <div class="col-md-3">
-        <div class="card p-3">
-            <h4>Sandbox Controls</h4>
-            <form id="greekForm">
-                <div class="row">
-                    <div class="col-6 form-group mb-2"><label>Spot</label><input type="number" name="spot_price" class="form-control form-control-sm" step="any" required></div>
-                    <div class="col-6 form-group mb-2"><label>Strike</label><input type="number" name="K" class="form-control form-control-sm" step="any" required></div>
-                </div>
-                <div class="row">
-                    <div class="col-6 form-group mb-2"><label>Type</label><select name="option_type" class="form-select form-select-sm"><option value="call">Call</option><option value="put">Put</option></select></div>
-                    <div class="col-6 form-group mb-2"><label>Pos</label><select name="position" class="form-select form-select-sm"><option value="long">Long</option><option value="short">Short</option></select></div>
-                </div>
-                <div class="form-group mb-2">
-                    <label>Bloomberg Price</label>
-                    <input type="number" name="actual_price" class="form-control form-control-sm" step="any" required>
-                </div>
-                
-                <hr>
-                <label>Time to Expiration (Days): <span id="tteLabel">30</span></label>
-                <input type="range" class="form-range" id="tteSlider" name="tte_days" min="1" max="365" value="30">
-                
-                <hr>
-                <h5>Display Greeks</h5>
-                <div class="form-check"><input class="form-check-input greek-check" type="checkbox" value="delta" checked> <label>Delta</label></div>
-                <div class="form-check"><input class="form-check-input greek-check" type="checkbox" value="gamma" checked> <label>Gamma</label></div>
-                <div class="form-check"><input class="form-check-input greek-check" type="checkbox" value="vega"> <label>Vega (per 1%)</label></div>
-                <div class="form-check"><input class="form-check-input greek-check" type="checkbox" value="theta"> <label>Theta (Daily)</label></div>
-                
-                <button type="submit" class="btn btn-primary w-100 mt-3">Render Sandbox</button>
-            </form>
+<style>
+    /* AMG Light Corporate Theme */
+    body { background-color: #eef0f2; color: #333; font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    
+    .amg-card { background-color: #ffffff; border: 1px solid #d1d5db; border-radius: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
+    
+    .amg-input, .amg-select { background-color: #f8f9fa; border: 1px solid #ced4da; color: #333; font-size: 0.85rem; padding: 4px 8px; border-radius: 3px; width: 100%; transition: border-color 0.15s ease-in-out; }
+    .amg-input:focus, .amg-select:focus { outline: none; border-color: #001f3f; box-shadow: 0 0 0 0.2rem rgba(0, 31, 63, 0.1); }
+    
+    .amg-label { font-size: 0.7rem; color: #6c757d; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 2px; display: block; font-weight: 600; }
+    .amg-value { font-size: 1.1rem; font-weight: 700; color: #001f3f; }
+    .amg-stat-box { display: flex; flex-direction: column; }
+    
+    .amg-btn { background-color: #e9ecef; color: #495057; border: 1px solid #ced4da; padding: 4px 12px; border-radius: 3px; cursor: pointer; transition: 0.2s; font-weight: 500; }
+    .amg-btn:hover { background-color: #dde0e3; }
+    .amg-btn-primary { background-color: #001f3f; border-color: #001f3f; color: white; }
+    .amg-btn-primary:hover { background-color: #001122; color: white; }
+    .amg-btn-danger { background-color: #dc3545; border-color: #dc3545; color: white; }
+    .amg-btn-danger:hover { background-color: #c82333; color: white; }
+    
+    .amg-table-header { font-size: 0.75rem; color: #6c757d; text-transform: uppercase; font-weight: 600; border-bottom: 2px solid #e9ecef; padding-bottom: 8px; margin-bottom: 8px; }
+    .leg-row { padding: 8px 0; border-bottom: 1px solid #e9ecef; align-items: center; }
+    .leg-row:last-child { border-bottom: none; }
+    .data-text { font-size: 0.85rem; color: #333; font-weight: 500; }
+    
+    .container { max-width: 1400px; }
+</style>
+
+<!-- Top Stats Bar -->
+<div class="amg-card p-3 mb-3 d-flex justify-content-between align-items-center flex-wrap gap-3">
+    <div class="d-flex gap-4">
+        <div class="amg-stat-box">
+            <span class="amg-label">Underlying Spot</span>
+            <input type="number" id="global_spot" class="amg-input fw-bold fs-6" style="width: 100px; border:none; background: transparent; padding:0; color: #001f3f;" placeholder="0.00" onchange="triggerCalc()">
+        </div>
+        <div class="amg-stat-box">
+            <span class="amg-label">Days to Expiry (TTE)</span>
+            <div class="d-flex align-items-center gap-2">
+                <input type="range" id="tteSlider" min="1" max="365" value="30" oninput="updateTteLabel(); triggerCalc()" style="width: 100px;">
+                <span id="tteLabel" class="amg-value fs-6">30</span>
+            </div>
         </div>
     </div>
-    <div class="col-md-9">
-        <div class="card p-3 mb-3"><div id="payoffChart" style="height: 350px;"></div></div>
-        <div class="card p-3"><div id="greekChart" style="height: 350px;"></div></div>
+    <div class="d-flex gap-4">
+        <div class="amg-stat-box"><span class="amg-label">Net Cost</span><span class="amg-value" id="agg_cost">0.00</span></div>
+        <div class="amg-stat-box"><span class="amg-label">Delta</span><span class="amg-value" id="agg_delta">0.00</span></div>
+        <div class="amg-stat-box"><span class="amg-label">Gamma</span><span class="amg-value" id="agg_gamma">0.00</span></div>
+        <div class="amg-stat-box"><span class="amg-label">Theta</span><span class="amg-value" id="agg_theta">0.00</span></div>
+        <div class="amg-stat-box"><span class="amg-label">Vega</span><span class="amg-value" id="agg_vega">0.00</span></div>
+        <div class="amg-stat-box"><span class="amg-label">Rho</span><span class="amg-value" id="agg_rho">0.00</span></div>
     </div>
 </div>
 
+<!-- Chart Section -->
+<div class="amg-card p-2 mb-3 position-relative">
+    <div class="position-absolute top-0 start-0 p-3 z-3">
+        <select id="greekSelector" class="amg-select fw-bold" style="width: 120px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);" onchange="drawChart()">
+            <option value="delta">Delta</option>
+            <option value="gamma">Gamma</option>
+            <option value="vega">Vega</option>
+            <option value="theta">Theta</option>
+            <option value="rho">Rho</option>
+        </select>
+    </div>
+    <div id="mainChart" style="height: 500px; width: 100%;"></div>
+</div>
+
+<!-- Bottom Inline Legs Table -->
+<div class="amg-card p-3">
+    <div class="row amg-table-header">
+        <div class="col-1">Strike</div>
+        <div class="col-1">Type</div>
+        <div class="col-1">S/L</div>
+        <div class="col-1">Size</div>
+        <div class="col-1">Mult</div>
+        <div class="col-1">Price</div>
+        <div class="col-1 text-end">IV %</div>
+        <div class="col-1 text-end">Theo</div>
+        <div class="col-1 text-end">Delta</div>
+        <div class="col-1 text-end">Gamma</div>
+        <div class="col-1 text-end">Vega</div>
+        <div class="col-1 text-center"><button class="amg-btn amg-btn-primary py-0 px-3" onclick="addEmptyLeg()">+ Add Leg</button></div>
+    </div>
+    <div id="activeLegsContainer" class="d-flex flex-column"></div>
+</div>
+
 <script>
-let currentData = null;
+let activeLegs = [];
+let debounceTimer;
+let currentChartData = null;
+let currentLegData = [];
 
-document.getElementById('tteSlider').addEventListener('input', function() {
-    document.getElementById('tteLabel').innerText = this.value;
-    if(currentData) document.getElementById('greekForm').dispatchEvent(new Event('submit'));
-});
+function updateTteLabel() { document.getElementById('tteLabel').innerText = document.getElementById('tteSlider').value; }
 
-document.querySelectorAll('.greek-check').forEach(cb => {
-    cb.addEventListener('change', drawGreeks);
-});
-
-document.getElementById('greekForm').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const formData = new FormData(e.target);
-    const response = await fetch('/api/greeks', { method: 'POST', body: formData });
-    currentData = await response.json();
-    
-    Plotly.newPlot('payoffChart', [{
-        x: currentData.underlying, y: currentData.payoff, type: 'scatter', name: 'Total PnL', line: {color: '#0d6efd', width: 3}
-    }], { title: 'Dynamic Payoff', margin: {t: 30} });
-
-    drawGreeks();
-});
-
-function drawGreeks() {
-    if (!currentData) return;
-    const traces = [];
-    document.querySelectorAll('.greek-check:checked').forEach(cb => {
-        const greekName = cb.value;
-        traces.push({
-            x: currentData.underlying,
-            y: currentData[greekName],
-            type: 'scatter',
-            name: greekName.charAt(0).toUpperCase() + greekName.slice(1)
-        });
-    });
-    Plotly.newPlot('greekChart', traces, { title: 'Greek Exposures', margin: {t: 30} });
+function addEmptyLeg() {
+    const defaultSpot = document.getElementById('global_spot').value || 100;
+    activeLegs.push({ position: 'long', option_type: 'call', K: parseFloat(defaultSpot), actual_price: 1.50, contracts: 1, multiplier: 100 });
+    renderLegsInputs();
 }
+
+function updateLeg(index, field, value) { activeLegs[index][field] = value; triggerCalc(); }
+function removeLeg(index) { activeLegs.splice(index, 1); triggerCalc(); }
+
+function renderLegsInputs() {
+    const container = document.getElementById('activeLegsContainer');
+    if (activeLegs.length === 0) {
+        container.innerHTML = '<div class="text-center py-4 text-muted">No positions added. Click + Add Leg to build a strategy.</div>';
+        currentChartData = null; drawChart(); return;
+    }
+
+    let html = '';
+    activeLegs.forEach((leg, i) => {
+        const metrics = currentLegData[i] || { iv: 0, theor: 0, delta: 0, gamma: 0, vega: 0 };
+        html += `
+        <div class="row leg-row">
+            <div class="col-1"><input type="number" class="amg-input" value="${leg.K}" onchange="updateLeg(${i}, 'K', this.value)"></div>
+            <div class="col-1"><select class="amg-select" onchange="updateLeg(${i}, 'option_type', this.value)"><option value="call" ${leg.option_type==='call'?'selected':''}>Call</option><option value="put" ${leg.option_type==='put'?'selected':''}>Put</option></select></div>
+            <div class="col-1"><select class="amg-select text-center fw-bold" style="background-color: ${leg.position==='long'?'#e6f4ea':'#fce8e6'}; color: ${leg.position==='long'?'#137333':'#c5221f'}; border-color: transparent;" onchange="updateLeg(${i}, 'position', this.value)"><option value="long" ${leg.position==='long'?'selected':''}>Long</option><option value="short" ${leg.position==='short'?'selected':''}>Short</option></select></div>
+            <div class="col-1"><input type="number" class="amg-input" value="${leg.contracts}" onchange="updateLeg(${i}, 'contracts', this.value)"></div>
+            <div class="col-1"><input type="number" class="amg-input" value="${leg.multiplier}" onchange="updateLeg(${i}, 'multiplier', this.value)"></div>
+            <div class="col-1"><input type="number" class="amg-input" value="${leg.actual_price}" step="any" onchange="updateLeg(${i}, 'actual_price', this.value)"></div>
+            <div class="col-1 text-end data-text">${metrics.iv.toFixed(2)}%</div>
+            <div class="col-1 text-end data-text">${metrics.theor.toFixed(2)}</div>
+            <div class="col-1 text-end data-text">${metrics.delta.toFixed(3)}</div>
+            <div class="col-1 text-end data-text">${metrics.gamma.toFixed(3)}</div>
+            <div class="col-1 text-end data-text">${metrics.vega.toFixed(3)}</div>
+            <div class="col-1 text-center"><button class="amg-btn amg-btn-danger py-0 px-2" onclick="removeLeg(${i})">✕</button></div>
+        </div>`;
+    });
+    container.innerHTML = html;
+}
+function triggerCalc() {
+    renderLegsInputs();
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(fetchGreeks, 250);
+}
+
+async function fetchGreeks() {
+    if (activeLegs.length === 0) return;
+    const spot = document.getElementById('global_spot').value || activeLegs[0].K;
+    
+    const payload = {
+        spot_price: spot, tte_days: document.getElementById('tteSlider').value,
+        legs: activeLegs.map(l => ({ ...l, asset_class: 'equity', r: 0.05, q: 0, volatility_method: 'implied' }))
+    };
+
+    const response = await fetch('/api/greeks', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
+    const data = await response.json();
+    
+    currentChartData = data.chart;
+    currentLegData = data.legs;
+    
+    document.getElementById('agg_cost').innerText = "$" + data.aggregates.cost.toFixed(2);
+    document.getElementById('agg_delta').innerText = data.aggregates.delta.toFixed(3);
+    document.getElementById('agg_gamma').innerText = data.aggregates.gamma.toFixed(3);
+    document.getElementById('agg_theta').innerText = data.aggregates.theta.toFixed(3);
+    document.getElementById('agg_vega').innerText = data.aggregates.vega.toFixed(3);
+    document.getElementById('agg_rho').innerText = data.aggregates.rho.toFixed(3);
+    
+    renderLegsInputs();
+    drawChart();
+}
+
+function drawChart() {
+    if (!currentChartData) { Plotly.purge('mainChart'); return; }
+    const spot = document.getElementById('global_spot').value || activeLegs[0].K;
+    const greekName = document.getElementById('greekSelector').value;
+
+    const traces = [
+        // 1. Expiration Payoff (Intrinsic) - AMG Primary Blue[cite: 6]
+        { 
+            x: currentChartData.underlying, 
+            y: currentChartData.payoff_exp, 
+            type: 'scatter', 
+            mode: 'lines', 
+            name: 'Exp Payoff', 
+            line: { color: 'rgb(31, 78, 120)', width: 2 }, 
+            fill: 'tozeroy', 
+            fillcolor: 'rgba(31, 78, 120, 0.1)' 
+        },
+        // 2. TTE Dynamic PnL (Extrinsic) - AMG Header Gray[cite: 6]
+        { 
+            x: currentChartData.underlying, 
+            y: currentChartData.pnl_tte, 
+            type: 'scatter', 
+            mode: 'lines', 
+            name: 'TTE PnL', 
+            line: { color: 'rgb(117, 113, 113)', width: 2, dash: 'dot' } 
+        },
+        // 3. Selected Greek - AMG Secondary Blue[cite: 6]
+        { 
+            x: currentChartData.underlying, 
+            y: currentChartData[greekName], 
+            type: 'scatter', 
+            mode: 'lines', 
+            name: greekName.toUpperCase(), 
+            yaxis: 'y2', 
+            line: { color: 'rgb(87, 138, 205)', width: 2, dash: 'dash' } 
+        }
+    ];
+
+    const layout = {
+        plot_bgcolor: '#ffffff', paper_bgcolor: '#ffffff',
+        font: { color: '#495057', family: '"Segoe UI", Roboto, sans-serif' },
+        margin: { t: 20, b: 40, l: 60, r: 60 },
+        showlegend: false, hovermode: 'x unified',
+        xaxis: { gridcolor: '#e9ecef', zeroline: false },
+        yaxis: { title: 'P&L ($)', gridcolor: '#e9ecef', zerolinecolor: '#adb5bd', zerolinewidth: 1, tickformat: '.2f' },
+        yaxis2: { title: greekName.toUpperCase(), overlaying: 'y', side: 'right', showgrid: false, zeroline: false },
+        shapes: [{ type: 'line', x0: spot, x1: spot, y0: 0, y1: 1, yref: 'paper', line: { color: '#6c757d', dash: 'dot', width: 1 } }]
+    };
+
+    Plotly.newPlot('mainChart', traces, layout, {responsive: true, displayModeBar: false});
+}
+
+addEmptyLeg();
 </script>
 {% endblock %}
