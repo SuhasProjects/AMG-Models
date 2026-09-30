@@ -18,6 +18,35 @@ def _safe_float(value, default=0.0):
         return default
 
 
+def _smart_round(val):
+    """
+    Rounds a number to either 2 decimal places or 3 significant figures,
+    whichever is more precise. Safely ignores strings (like 'Unlimited').
+    """
+    if isinstance(val, str):
+        return val
+    if val is None:
+        return None
+    try:
+        f_val = float(val)
+    except (TypeError, ValueError):
+        return val
+        
+    if f_val == 0.0:
+        return 0.0
+        
+    # Find the magnitude (power of 10) of the number
+    digits = int(math.floor(math.log10(abs(f_val))))
+    
+    # 3 sig figs means rounding to (2 - digits) decimal places
+    sig_places = 2 - digits
+    
+    # Use max() so it rounds to at least 2 decimal places, but goes deeper if needed for 3 sig figs
+    places = max(2, sig_places)
+    
+    return round(f_val, places)
+
+
 def _position_sign(position):
     return 1 if str(position).lower() == "long" else -1
 
@@ -213,7 +242,7 @@ def calculate_trade_details(legs):
 
 def populate_input_sheet(ws, spot_price, legs, sector="", strategy_name=""):
     """Populate the Input sheet while preserving the workbook formatting."""
-    ws["B7"] = spot_price
+    ws["B7"] = _smart_round(spot_price)
     ws["B8"] = len(legs)
     ws["B9"] = sector
     ws["B10"] = strategy_name
@@ -228,19 +257,17 @@ def populate_input_sheet(ws, spot_price, legs, sector="", strategy_name=""):
         col = leg_columns[i]
 
         ws[f"{col}13"] = leg.get("asset_class")
-        ws[f"{col}14"] = leg.get("K")
+        ws[f"{col}14"] = _smart_round(leg.get("K"))
         ws[f"{col}15"] = str(leg.get("option_type", "")).title()
         ws[f"{col}16"] = str(leg.get("position", "")).title()
         ws[f"{col}17"] = leg.get("current_date")
         ws[f"{col}18"] = leg.get("expiration_date")
 
-        T = leg.get("T")
-        ws[f"{col}19"] = T
-
-        ws[f"{col}20"] = leg.get("sigma")
-        ws[f"{col}21"] = leg.get("r")
-        ws[f"{col}22"] = leg.get("rf")
-        ws[f"{col}23"] = leg.get("quantity")
+        ws[f"{col}19"] = _smart_round(leg.get("T"))
+        ws[f"{col}20"] = _smart_round(leg.get("sigma"))
+        ws[f"{col}21"] = _smart_round(leg.get("r"))
+        ws[f"{col}22"] = _smart_round(leg.get("rf"))
+        ws[f"{col}23"] = _smart_round(leg.get("quantity"))
 
 
 def _clear_output_leg_columns(ws):
@@ -249,7 +276,7 @@ def _clear_output_leg_columns(ws):
         for row in range(7, 14):
             ws.cell(row=row, column=col).value = None
 
-        for row in range(16, 21):
+        for row in range(16, 22):  # Increased bound to clear row 21 properly
             ws.cell(row=row, column=col).value = None
 
 
@@ -279,22 +306,6 @@ def populate_output_sheet(ws, strategy_result):
         "phi": 13,
     }
 
-    ws["A13"] = "Phi (φ)"
-
-    # --------------------------------------------------------------
-    # GREEKS
-    # --------------------------------------------------------------
-    ws["B7"] = "Total"
-
-    greek_rows = {
-        "delta": 8,
-        "gamma": 9,
-        "vega": 10,
-        "theta": 11,
-        "rho": 12,
-        "phi": 13,
-    }
-
     # Helper function to scale raw greeks to AMG institutional conventions
     def _scale_greek(metric, raw_val):
         metric_lower = metric.lower()
@@ -307,7 +318,7 @@ def populate_output_sheet(ws, strategy_result):
     # Populate Total column (Column B) with scaled totals
     for metric, row in greek_rows.items():
         raw_total = totals.get(metric, 0.0)
-        ws.cell(row=row, column=2).value = _scale_greek(metric, raw_total)
+        ws.cell(row=row, column=2).value = _smart_round(_scale_greek(metric, raw_total))
 
     # Populate individual leg columns (Columns C:F) with scaled leg greeks
     for i, leg in enumerate(legs[:MAX_LEGS], start=3):
@@ -321,18 +332,16 @@ def populate_output_sheet(ws, strategy_result):
         for metric, row in greek_rows.items():
             raw_value = _safe_float(leg.get(metric))
             scaled_value = _scale_greek(metric, raw_value)
-            ws.cell(row=row, column=i).value = sign * scaled_value
+            ws.cell(row=row, column=i).value = _smart_round(sign * scaled_value)
+
 
     # --------------------------------------------------------------
     # PRICING
     # --------------------------------------------------------------
-    # --------------------------------------------------------------
-    # PRICING
-    # --------------------------------------------------------------
     ws["B16"] = "Total"
-    ws["B18"] = totals.get("price", 0.0)
-    ws["B19"] = totals.get("mc_price", 0.0)
-    ws["B20"] = strategy_result.get("garch_volatility")
+    ws["B18"] = _smart_round(totals.get("price", 0.0))
+    ws["B19"] = _smart_round(totals.get("mc_price", 0.0))
+    ws["B20"] = _smart_round(strategy_result.get("garch_volatility"))
     
     # Calculate total actual/Bloomberg price across legs (position & quantity adjusted)
     total_actual_price = 0.0
@@ -343,7 +352,7 @@ def populate_output_sheet(ws, strategy_result):
         if leg_actual <= 1e-8:
             leg_actual = _safe_float(leg.get("price"))
         total_actual_price += sign * qty * leg_actual
-    ws["B21"] = total_actual_price
+    ws["B21"] = _smart_round(total_actual_price)
 
     for i, leg in enumerate(legs[:MAX_LEGS], start=3):
         short_name = _leg_short_name(leg)
@@ -355,24 +364,18 @@ def populate_output_sheet(ws, strategy_result):
         ws.cell(row=17, column=i).value = _model_name(leg)
 
         # Individual prices stay raw/per-unit.
-        ws.cell(row=18, column=i).value = _safe_float(
-            leg.get("price")
-        )
+        ws.cell(row=18, column=i).value = _smart_round(_safe_float(leg.get("price")))
+        ws.cell(row=19, column=i).value = _smart_round(_safe_float(leg.get("mc_price")))
 
-        ws.cell(row=19, column=i).value = _safe_float(
-            leg.get("mc_price")
-        )
-
-        ws.cell(row=20, column=i).value = leg.get(
-            "garch_volatility",
-            strategy_result.get("garch_volatility")
+        ws.cell(row=20, column=i).value = _smart_round(
+            leg.get("garch_volatility", strategy_result.get("garch_volatility"))
         )
 
         # Individual Actual / Bloomberg Price
         actual_val = _safe_float(leg.get("actual_price"))
         if actual_val <= 1e-8:
             actual_val = _safe_float(leg.get("price"))
-        ws.cell(row=21, column=i).value = actual_val
+        ws.cell(row=21, column=i).value = _smart_round(actual_val)
 
     # Make the total section explicit about the analytical model only
     # when all legs use the same model. Otherwise state that multiple
@@ -387,22 +390,22 @@ def populate_output_sheet(ws, strategy_result):
     # TRADE DETAILS
     # --------------------------------------------------------------
     details = calculate_trade_details(legs)
-    ws["B23"] = details["max_profit"]
-    ws["B24"] = details["max_loss"]
-    ws["B25"] = details["risk_reward"]
+    ws["B24"] = _smart_round(details["max_profit"])   # Shifted down one cell
+    ws["B25"] = _smart_round(details["max_loss"])     # Shifted down one cell
+    ws["B26"] = _smart_round(details["risk_reward"])  # Shifted down one cell
 
     # --------------------------------------------------------------
     # MONTE CARLO FOR SLIDES
     # --------------------------------------------------------------
-    # Preserve A28/A29 as the section's labels and put only the
-    # human-readable leg names across the row.
+    # Preserve A29/A30 as the section's labels and put only the
+    # human-readable leg names across the row (Shifted down one cell).
     for col in range(2, 7):
-        ws.cell(row=28, column=col).value = None
         ws.cell(row=29, column=col).value = None
+        ws.cell(row=30, column=col).value = None
 
     for i, leg in enumerate(legs[:MAX_LEGS], start=2):
-        ws.cell(row=28, column=i).value = _leg_full_name(leg)
-        ws.cell(row=29, column=i).value = _safe_float(leg.get("mc_price"))
+        ws.cell(row=29, column=i).value = _leg_full_name(leg)
+        ws.cell(row=30, column=i).value = _smart_round(_safe_float(leg.get("mc_price")))
 
 
 def populate_payoff_data(ws, spot_price, legs):
@@ -434,12 +437,12 @@ def populate_payoff_data(ws, spot_price, legs):
     ws["T1"] = "All"
 
     for row_idx, row_data in enumerate(rows, start=PAYOFF_START_ROW):
-        ws.cell(row=row_idx, column=15).value = row_data["underlying"]
+        ws.cell(row=row_idx, column=15).value = _smart_round(row_data["underlying"])
 
         for leg_idx, value in enumerate(row_data["legs"], start=16):
-            ws.cell(row=row_idx, column=leg_idx).value = value
+            ws.cell(row=row_idx, column=leg_idx).value = _smart_round(value)
 
-        ws.cell(row=row_idx, column=20).value = row_data["total"]
+        ws.cell(row=row_idx, column=20).value = _smart_round(row_data["total"])
 
     return chart_start, chart_step
 
@@ -502,9 +505,9 @@ def create_excel_report(
     )
 
     # Store the calculated chart start/step in the template's existing
-    # chart-control cells. These are data inputs, not chart formatting.
-    output_ws["J7"] = chart_start
-    output_ws["J8"] = chart_step
+    # chart-control cells. (Shifted one cell right: J->K).
+    output_ws["K7"] = _smart_round(chart_start)
+    output_ws["K8"] = _smart_round(chart_step)
 
     wb.save(output_path)
 
