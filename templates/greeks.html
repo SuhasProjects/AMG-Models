@@ -153,19 +153,20 @@ function drawChart() {
     const spot = document.getElementById('global_spot').value || activeLegs[0].K;
     const greekName = document.getElementById('greekSelector').value;
 
+    
     const traces = [
-        // 1. Expiration Payoff (Intrinsic) - AMG Primary Blue[cite: 6]
+        // 1. Expiration Payoff (Intrinsic) - AMG Primary Blue
         { 
             x: currentChartData.underlying, 
             y: currentChartData.payoff_exp, 
             type: 'scatter', 
             mode: 'lines', 
             name: 'Exp Payoff', 
-            line: { color: 'rgb(31, 78, 120)', width: 2 }, 
+            line: { color: 'rgb(31, 78, 120)', width: 3 }, 
             fill: 'tozeroy', 
-            fillcolor: 'rgba(31, 78, 120, 0.08)' 
+            fillcolor: 'rgba(31, 78, 120, 0.1)' 
         },
-        // 2. TTE Dynamic PnL (Extrinsic) - AMG Header Gray[cite: 6]
+        // 2. TTE Dynamic PnL (Extrinsic) - AMG Header Gray
         { 
             x: currentChartData.underlying, 
             y: currentChartData.pnl_tte, 
@@ -174,7 +175,7 @@ function drawChart() {
             name: 'TTE PnL', 
             line: { color: 'rgb(117, 113, 113)', width: 2, dash: 'dot' } 
         },
-        // 3. Selected Greek - AMG Secondary Blue[cite: 6]
+        // 3. Selected Greek - AMG Secondary Blue
         { 
             x: currentChartData.underlying, 
             y: currentChartData[greekName], 
@@ -187,17 +188,20 @@ function drawChart() {
     ];
 
     const layout = {
-        plot_bgcolor: '#ffffff', paper_bgcolor: '#ffffff',
+        title: { text: 'Dynamic Risk & Payoff', font: { size: 16, color: '#111', family: 'Montserrat, sans-serif' } },
+        plot_bgcolor: 'white', paper_bgcolor: 'white',
         font: { color: '#111', family: 'Montserrat, sans-serif' },
-        margin: { t: 20, b: 40, l: 60, r: 60 },
+        margin: { t: 50, b: 50, l: 60, r: 60 },
         showlegend: false, hovermode: 'x unified',
-        xaxis: { gridcolor: 'rgb(192, 192, 192)', zeroline: false }, // Subheader Gray[cite: 6]
-        yaxis: { title: 'P&L ($)', gridcolor: 'rgb(192, 192, 192)', zerolinecolor: 'rgb(117, 113, 113)', zerolinewidth: 2, tickformat: '.2f' }, // Header Gray[cite: 6]
+        xaxis: { title: 'Underlying Price', gridcolor: 'rgb(192, 192, 192)', zeroline: false }, 
+        yaxis: { title: 'P&L ($)', gridcolor: 'rgb(192, 192, 192)', zerolinecolor: 'rgb(117, 113, 113)', zerolinewidth: 2, tickformat: '.2f' }, 
         yaxis2: { title: greekName.toUpperCase(), overlaying: 'y', side: 'right', showgrid: false, zeroline: false },
-        shapes: [{ type: 'line', x0: spot, x1: spot, y0: 0, y1: 1, yref: 'paper', line: { color: 'rgb(117, 113, 113)', dash: 'dash', width: 1 } }]
+        shapes: [{ type: 'line', x0: spot, x1: spot, y0: 0, y1: 1, yref: 'paper', line: { color: 'rgb(117, 113, 113)', dash: 'dash', width: 2 } }]
     };
 
     Plotly.newPlot('mainChart', traces, layout, {responsive: true, displayModeBar: false});
+
+
 }
 
 addEmptyLeg();

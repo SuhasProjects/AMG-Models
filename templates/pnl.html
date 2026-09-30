@@ -166,8 +166,9 @@ async function calculatePnL() {
         xaxis: { title: 'Underlying Price', gridcolor: 'rgb(192, 192, 192)', zeroline: false }, 
         yaxis: { title: 'Net Profit / Loss ($)', gridcolor: 'rgb(192, 192, 192)', zeroline: true, zerolinecolor: 'rgb(117, 113, 113)', zerolinewidth: 2 }, 
         plot_bgcolor: 'white', paper_bgcolor: 'white',
+        font: { color: '#111', family: 'Montserrat, sans-serif' },
         margin: { t: 50, b: 50, l: 60, r: 30 }, hovermode: 'x unified',
-        shapes: [{ type: 'line', x0: spot, x1: spot, y0: 0, y1: 1, yref: 'paper', line: { color: 'rgb(117, 113, 113)', dash: 'dash' } }] 
+        shapes: [{ type: 'line', x0: spot, x1: spot, y0: 0, y1: 1, yref: 'paper', line: { color: 'rgb(117, 113, 113)', dash: 'dash', width: 2 } }] 
     };
 
     Plotly.newPlot('pnlChart', [traceTotal], layout, {responsive: true});
