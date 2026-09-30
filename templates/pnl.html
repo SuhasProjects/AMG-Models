@@ -1,5 +1,14 @@
 {% extends 'base.html' %}
 {% block content %}
+<style>
+    /* Override the default 5fr 4fr layout specifically for the PnL page */
+    @media (min-width: 1024px) {
+        .dashboard-layout {
+            grid-template-columns: 1fr 2fr !important;
+        }
+    }
+</style>
+
 <div class="dashboard-layout">
     <!-- Left Side: Controls -->
     <div class="input-section">
@@ -141,25 +150,24 @@ async function calculatePnL() {
     document.getElementById('max-loss').innerText = "Max Loss: $" + data.details.max_loss;
     document.getElementById('rr-header').innerText = "Risk/Reward: " + data.details.risk_reward;
 
-    // Apply AMG Color Codes
     const traceTotal = {
         x: data.chart.underlying,
         y: data.chart.total,
         type: 'scatter',
         mode: 'lines',
         name: 'Total Net PnL',
-        line: { color: 'rgb(31, 78, 120)', width: 3 }, // Primary Blue[cite: 6]
+        line: { color: 'rgb(31, 78, 120)', width: 3 }, 
         fill: 'tozeroy',
         fillcolor: 'rgba(31, 78, 120, 0.1)'
     };
     
     const layout = {
         title: { text: 'Payoff Profile at Expiration', font: { size: 16, color: '#111', family: 'Montserrat, sans-serif' } },
-        xaxis: { title: 'Underlying Price', gridcolor: 'rgb(192, 192, 192)', zeroline: false }, // Subheader Gray grid[cite: 6]
-        yaxis: { title: 'Net Profit / Loss ($)', gridcolor: 'rgb(192, 192, 192)', zeroline: true, zerolinecolor: 'rgb(117, 113, 113)', zerolinewidth: 2 }, // Header Gray zero line[cite: 6]
+        xaxis: { title: 'Underlying Price', gridcolor: 'rgb(192, 192, 192)', zeroline: false }, 
+        yaxis: { title: 'Net Profit / Loss ($)', gridcolor: 'rgb(192, 192, 192)', zeroline: true, zerolinecolor: 'rgb(117, 113, 113)', zerolinewidth: 2 }, 
         plot_bgcolor: 'white', paper_bgcolor: 'white',
         margin: { t: 50, b: 50, l: 60, r: 30 }, hovermode: 'x unified',
-        shapes: [{ type: 'line', x0: spot, x1: spot, y0: 0, y1: 1, yref: 'paper', line: { color: 'rgb(117, 113, 113)', dash: 'dash' } }] // Header Gray dot[cite: 6]
+        shapes: [{ type: 'line', x0: spot, x1: spot, y0: 0, y1: 1, yref: 'paper', line: { color: 'rgb(117, 113, 113)', dash: 'dash' } }] 
     };
 
     Plotly.newPlot('pnlChart', [traceTotal], layout, {responsive: true});

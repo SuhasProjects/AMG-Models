@@ -1,62 +1,37 @@
 {% extends 'base.html' %}
 {% block content %}
-<style>
-    /* AMG Light Corporate Theme */
-    body { background-color: #eef0f2; color: #333; font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
-    
-    .amg-card { background-color: #ffffff; border: 1px solid #d1d5db; border-radius: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
-    
-    .amg-input, .amg-select { background-color: #f8f9fa; border: 1px solid #ced4da; color: #333; font-size: 0.85rem; padding: 4px 8px; border-radius: 3px; width: 100%; transition: border-color 0.15s ease-in-out; }
-    .amg-input:focus, .amg-select:focus { outline: none; border-color: #001f3f; box-shadow: 0 0 0 0.2rem rgba(0, 31, 63, 0.1); }
-    
-    .amg-label { font-size: 0.7rem; color: #6c757d; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 2px; display: block; font-weight: 600; }
-    .amg-value { font-size: 1.1rem; font-weight: 700; color: #001f3f; }
-    .amg-stat-box { display: flex; flex-direction: column; }
-    
-    .amg-btn { background-color: #e9ecef; color: #495057; border: 1px solid #ced4da; padding: 4px 12px; border-radius: 3px; cursor: pointer; transition: 0.2s; font-weight: 500; }
-    .amg-btn:hover { background-color: #dde0e3; }
-    .amg-btn-primary { background-color: #001f3f; border-color: #001f3f; color: white; }
-    .amg-btn-primary:hover { background-color: #001122; color: white; }
-    .amg-btn-danger { background-color: #dc3545; border-color: #dc3545; color: white; }
-    .amg-btn-danger:hover { background-color: #c82333; color: white; }
-    
-    .amg-table-header { font-size: 0.75rem; color: #6c757d; text-transform: uppercase; font-weight: 600; border-bottom: 2px solid #e9ecef; padding-bottom: 8px; margin-bottom: 8px; }
-    .leg-row { padding: 8px 0; border-bottom: 1px solid #e9ecef; align-items: center; }
-    .leg-row:last-child { border-bottom: none; }
-    .data-text { font-size: 0.85rem; color: #333; font-weight: 500; }
-    
-    .container { max-width: 1400px; }
-</style>
 
 <!-- Top Stats Bar -->
-<div class="amg-card p-3 mb-3 d-flex justify-content-between align-items-center flex-wrap gap-3">
-    <div class="d-flex gap-4">
-        <div class="amg-stat-box">
-            <span class="amg-label">Underlying Spot</span>
-            <input type="number" id="global_spot" class="amg-input fw-bold fs-6" style="width: 100px; border:none; background: transparent; padding:0; color: #001f3f;" placeholder="0.00" onchange="triggerCalc()">
-        </div>
-        <div class="amg-stat-box">
-            <span class="amg-label">Days to Expiry (TTE)</span>
-            <div class="d-flex align-items-center gap-2">
-                <input type="range" id="tteSlider" min="1" max="365" value="30" oninput="updateTteLabel(); triggerCalc()" style="width: 100px;">
-                <span id="tteLabel" class="amg-value fs-6">30</span>
+<div class="card" style="margin-bottom: 30px; padding: 25px 36px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 30px;">
+        
+        <div style="display: flex; gap: 30px; align-items: flex-end;">
+            <div class="form-group" style="margin: 0; min-width: 140px;">
+                <label>Underlying Spot</label>
+                <input type="number" id="global_spot" style="font-weight: 600; color: var(--amg-navy); padding: 10px;" placeholder="0.00" onchange="triggerCalc()">
+            </div>
+            <div class="form-group" style="margin: 0; min-width: 180px;">
+                <label>Days to Expiry (TTE): <span id="tteLabel" style="color: var(--amg-navy); font-size: 13px;">30</span></label>
+                <input type="range" id="tteSlider" min="1" max="365" value="30" oninput="updateTteLabel(); triggerCalc()" style="padding: 0; border: none; height: 38px;">
             </div>
         </div>
-    </div>
-    <div class="d-flex gap-4">
-        <div class="amg-stat-box"><span class="amg-label">Net Cost</span><span class="amg-value" id="agg_cost">0.00</span></div>
-        <div class="amg-stat-box"><span class="amg-label">Delta</span><span class="amg-value" id="agg_delta">0.00</span></div>
-        <div class="amg-stat-box"><span class="amg-label">Gamma</span><span class="amg-value" id="agg_gamma">0.00</span></div>
-        <div class="amg-stat-box"><span class="amg-label">Theta</span><span class="amg-value" id="agg_theta">0.00</span></div>
-        <div class="amg-stat-box"><span class="amg-label">Vega</span><span class="amg-value" id="agg_vega">0.00</span></div>
-        <div class="amg-stat-box"><span class="amg-label">Rho</span><span class="amg-value" id="agg_rho">0.00</span></div>
+
+        <div class="data-grid" style="margin: 0; grid-template-columns: repeat(6, 1fr); gap: 12px; flex-grow: 1;">
+            <div class="data-item"><div class="data-label">Net Cost</div><div class="data-value" id="agg_cost">0.00</div></div>
+            <div class="data-item"><div class="data-label">Delta</div><div class="data-value" id="agg_delta">0.00</div></div>
+            <div class="data-item"><div class="data-label">Gamma</div><div class="data-value" id="agg_gamma">0.00</div></div>
+            <div class="data-item"><div class="data-label">Theta</div><div class="data-value" id="agg_theta">0.00</div></div>
+            <div class="data-item"><div class="data-label">Vega</div><div class="data-value" id="agg_vega">0.00</div></div>
+            <div class="data-item"><div class="data-label">Rho</div><div class="data-value" id="agg_rho">0.00</div></div>
+        </div>
+        
     </div>
 </div>
 
 <!-- Chart Section -->
-<div class="amg-card p-2 mb-3 position-relative">
-    <div class="position-absolute top-0 start-0 p-3 z-3">
-        <select id="greekSelector" class="amg-select fw-bold" style="width: 120px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);" onchange="drawChart()">
+<div class="card" style="position: relative; padding: 20px 36px;">
+    <div style="position: absolute; top: 30px; left: 36px; z-index: 10;">
+        <select id="greekSelector" style="width: 140px; padding: 8px 12px; font-weight: 600; box-shadow: 0 4px 6px rgba(0,0,0,0.05);" onchange="drawChart()">
             <option value="delta">Delta</option>
             <option value="gamma">Gamma</option>
             <option value="vega">Vega</option>
@@ -68,22 +43,28 @@
 </div>
 
 <!-- Bottom Inline Legs Table -->
-<div class="amg-card p-3">
-    <div class="row amg-table-header">
-        <div class="col-1">Strike</div>
-        <div class="col-1">Type</div>
-        <div class="col-1">S/L</div>
-        <div class="col-1">Size</div>
-        <div class="col-1">Mult</div>
-        <div class="col-1">Price</div>
-        <div class="col-1 text-end">IV %</div>
-        <div class="col-1 text-end">Theo</div>
-        <div class="col-1 text-end">Delta</div>
-        <div class="col-1 text-end">Gamma</div>
-        <div class="col-1 text-end">Vega</div>
-        <div class="col-1 text-center"><button class="amg-btn amg-btn-primary py-0 px-3" onclick="addEmptyLeg()">+ Add Leg</button></div>
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 22px;">
+        <h2 style="margin: 0;">Active Structure</h2>
+        <button class="btn btn-primary" style="padding: 10px 20px;" onclick="addEmptyLeg()">+ Add Leg</button>
     </div>
-    <div id="activeLegsContainer" class="d-flex flex-column"></div>
+    
+    <div style="display: grid; grid-template-columns: repeat(6, 1fr) repeat(5, 0.8fr) 0.5fr; gap: 10px; border-bottom: 2px solid var(--border-gray); padding-bottom: 12px; margin-bottom: 15px;">
+        <div class="data-label" style="margin:0;">Strike</div>
+        <div class="data-label" style="margin:0;">Type</div>
+        <div class="data-label" style="margin:0;">Position</div>
+        <div class="data-label" style="margin:0;">Qty</div>
+        <div class="data-label" style="margin:0;">Mult</div>
+        <div class="data-label" style="margin:0;">Price</div>
+        <div class="data-label" style="margin:0; text-align: right;">IV %</div>
+        <div class="data-label" style="margin:0; text-align: right;">Theo</div>
+        <div class="data-label" style="margin:0; text-align: right;">Delta</div>
+        <div class="data-label" style="margin:0; text-align: right;">Gamma</div>
+        <div class="data-label" style="margin:0; text-align: right;">Vega</div>
+        <div></div>
+    </div>
+    
+    <div id="activeLegsContainer" style="display: flex; flex-direction: column; gap: 8px;"></div>
 </div>
 
 <script>
@@ -106,31 +87,35 @@ function removeLeg(index) { activeLegs.splice(index, 1); triggerCalc(); }
 function renderLegsInputs() {
     const container = document.getElementById('activeLegsContainer');
     if (activeLegs.length === 0) {
-        container.innerHTML = '<div class="text-center py-4 text-muted">No positions added. Click + Add Leg to build a strategy.</div>';
+        container.innerHTML = '<div style="text-align: center; font-size: 12px; color: var(--text-muted); padding: 30px 0;">No positions added. Click + Add Leg to build a strategy.</div>';
         currentChartData = null; drawChart(); return;
     }
 
     let html = '';
     activeLegs.forEach((leg, i) => {
         const metrics = currentLegData[i] || { iv: 0, theor: 0, delta: 0, gamma: 0, vega: 0 };
+        // We inject inline padding overrides so the table rows stay compact inside the grid
         html += `
-        <div class="row leg-row">
-            <div class="col-1"><input type="number" class="amg-input" value="${leg.K}" onchange="updateLeg(${i}, 'K', this.value)"></div>
-            <div class="col-1"><select class="amg-select" onchange="updateLeg(${i}, 'option_type', this.value)"><option value="call" ${leg.option_type==='call'?'selected':''}>Call</option><option value="put" ${leg.option_type==='put'?'selected':''}>Put</option></select></div>
-            <div class="col-1"><select class="amg-select text-center fw-bold" style="background-color: ${leg.position==='long'?'#e6f4ea':'#fce8e6'}; color: ${leg.position==='long'?'#137333':'#c5221f'}; border-color: transparent;" onchange="updateLeg(${i}, 'position', this.value)"><option value="long" ${leg.position==='long'?'selected':''}>Long</option><option value="short" ${leg.position==='short'?'selected':''}>Short</option></select></div>
-            <div class="col-1"><input type="number" class="amg-input" value="${leg.contracts}" onchange="updateLeg(${i}, 'contracts', this.value)"></div>
-            <div class="col-1"><input type="number" class="amg-input" value="${leg.multiplier}" onchange="updateLeg(${i}, 'multiplier', this.value)"></div>
-            <div class="col-1"><input type="number" class="amg-input" value="${leg.actual_price}" step="any" onchange="updateLeg(${i}, 'actual_price', this.value)"></div>
-            <div class="col-1 text-end data-text">${metrics.iv.toFixed(2)}%</div>
-            <div class="col-1 text-end data-text">${metrics.theor.toFixed(2)}</div>
-            <div class="col-1 text-end data-text">${metrics.delta.toFixed(3)}</div>
-            <div class="col-1 text-end data-text">${metrics.gamma.toFixed(3)}</div>
-            <div class="col-1 text-end data-text">${metrics.vega.toFixed(3)}</div>
-            <div class="col-1 text-center"><button class="amg-btn amg-btn-danger py-0 px-2" onclick="removeLeg(${i})">✕</button></div>
+        <div style="display: grid; grid-template-columns: repeat(6, 1fr) repeat(5, 0.8fr) 0.5fr; gap: 10px; align-items: center; border-bottom: 1px solid #f0f4f8; padding-bottom: 8px;">
+            <div><input type="number" value="${leg.K}" onchange="updateLeg(${i}, 'K', this.value)" style="padding: 8px 10px; font-size: 13px;"></div>
+            <div><select onchange="updateLeg(${i}, 'option_type', this.value)" style="padding: 8px 10px; font-size: 13px;"><option value="call" ${leg.option_type==='call'?'selected':''}>Call</option><option value="put" ${leg.option_type==='put'?'selected':''}>Put</option></select></div>
+            <div><select style="padding: 8px 10px; font-size: 13px; font-weight: 600; color: ${leg.position==='long'?'#10b981':'#ef4444'};" onchange="updateLeg(${i}, 'position', this.value)"><option value="long" ${leg.position==='long'?'selected':''}>Long</option><option value="short" ${leg.position==='short'?'selected':''}>Short</option></select></div>
+            <div><input type="number" value="${leg.contracts}" onchange="updateLeg(${i}, 'contracts', this.value)" style="padding: 8px 10px; font-size: 13px;"></div>
+            <div><input type="number" value="${leg.multiplier}" onchange="updateLeg(${i}, 'multiplier', this.value)" style="padding: 8px 10px; font-size: 13px;"></div>
+            <div><input type="number" value="${leg.actual_price}" step="any" onchange="updateLeg(${i}, 'actual_price', this.value)" style="padding: 8px 10px; font-size: 13px;"></div>
+            
+            <div style="text-align: right; font-size: 13px; color: var(--text-primary); font-weight: 500;">${metrics.iv.toFixed(2)}%</div>
+            <div style="text-align: right; font-size: 13px; color: var(--text-primary); font-weight: 500;">${metrics.theor.toFixed(2)}</div>
+            <div style="text-align: right; font-size: 13px; color: var(--text-primary); font-weight: 500;">${metrics.delta.toFixed(3)}</div>
+            <div style="text-align: right; font-size: 13px; color: var(--text-primary); font-weight: 500;">${metrics.gamma.toFixed(3)}</div>
+            <div style="text-align: right; font-size: 13px; color: var(--text-primary); font-weight: 500;">${metrics.vega.toFixed(3)}</div>
+            
+            <div style="text-align: right;"><button class="btn btn-danger" style="padding: 8px; width: 100%; min-width: 32px;" onclick="removeLeg(${i})">✕</button></div>
         </div>`;
     });
     container.innerHTML = html;
 }
+
 function triggerCalc() {
     renderLegsInputs();
     clearTimeout(debounceTimer);
@@ -178,7 +163,7 @@ function drawChart() {
             name: 'Exp Payoff', 
             line: { color: 'rgb(31, 78, 120)', width: 2 }, 
             fill: 'tozeroy', 
-            fillcolor: 'rgba(31, 78, 120, 0.1)' 
+            fillcolor: 'rgba(31, 78, 120, 0.08)' 
         },
         // 2. TTE Dynamic PnL (Extrinsic) - AMG Header Gray[cite: 6]
         { 
@@ -203,13 +188,13 @@ function drawChart() {
 
     const layout = {
         plot_bgcolor: '#ffffff', paper_bgcolor: '#ffffff',
-        font: { color: '#495057', family: '"Segoe UI", Roboto, sans-serif' },
+        font: { color: '#111', family: 'Montserrat, sans-serif' },
         margin: { t: 20, b: 40, l: 60, r: 60 },
         showlegend: false, hovermode: 'x unified',
-        xaxis: { gridcolor: '#e9ecef', zeroline: false },
-        yaxis: { title: 'P&L ($)', gridcolor: '#e9ecef', zerolinecolor: '#adb5bd', zerolinewidth: 1, tickformat: '.2f' },
+        xaxis: { gridcolor: 'rgb(192, 192, 192)', zeroline: false }, // Subheader Gray[cite: 6]
+        yaxis: { title: 'P&L ($)', gridcolor: 'rgb(192, 192, 192)', zerolinecolor: 'rgb(117, 113, 113)', zerolinewidth: 2, tickformat: '.2f' }, // Header Gray[cite: 6]
         yaxis2: { title: greekName.toUpperCase(), overlaying: 'y', side: 'right', showgrid: false, zeroline: false },
-        shapes: [{ type: 'line', x0: spot, x1: spot, y0: 0, y1: 1, yref: 'paper', line: { color: '#6c757d', dash: 'dot', width: 1 } }]
+        shapes: [{ type: 'line', x0: spot, x1: spot, y0: 0, y1: 1, yref: 'paper', line: { color: 'rgb(117, 113, 113)', dash: 'dash', width: 1 } }]
     };
 
     Plotly.newPlot('mainChart', traces, layout, {responsive: true, displayModeBar: false});
