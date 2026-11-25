@@ -44,6 +44,119 @@ def download_report():
         mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
 
+DEFAULT_FORM_VALUES = {
+    "asset_class": "equity",
+    "option_type": "call",
+    "position": "long",
+    "contracts": "1",
+    "multiplier": "100",
+    "current_date": "",
+    "expiration_date": "",
+    "K": "",
+    "r": "",
+    "foreign_risk_free_rate": "",
+    "q": "0",
+    "actual_price": "",
+    "volatility_method": "manual",
+    "volatility": "",
+}
+
+
+def _extract_form_values(form):
+    """Capture leg form inputs so they persist across submissions."""
+    return {k: form.get(k, default) for k, default in DEFAULT_FORM_VALUES.items()}
+
+
+def _leg_to_form_values(leg):
+    """Populate leg form inputs from an existing stored leg."""
+    return {
+        "asset_class": leg.get("asset_class", "equity"),
+        "option_type": leg.get("option_type", "call"),
+        "position": leg.get("position", "long"),
+        "contracts": str(leg.get("contracts", 1)),
+        "multiplier": str(int(leg["multiplier"]) if float(leg.get("multiplier", 100)).is_integer() else leg.get("multiplier", 100)),
+        "current_date": leg.get("current_date", ""),
+        "expiration_date": leg.get("expiration_date", ""),
+        "K": str(leg.get("K", "")),
+        "r": str(leg.get("risk_free_rate", leg.get("r", ""))),
+        "foreign_risk_free_rate": "" if leg.get("rf") is None else str(leg.get("rf")),
+        "q": str(leg.get("q", 0)),
+        "actual_price": str(leg.get("actual_price", "")),
+        "volatility_method": leg.get("volatility_method", "manual"),
+        "volatility": "" if leg.get("sigma") is None else f"{float(leg['sigma']):.6g}",
+    }
+
+
+def _build_priced_leg_from_form():
+    """Parse, validate, and price a single option leg from request.form."""
+    historical_text = _required_form_value("historical_data")
+    data = pd.read_csv(StringIO(historical_text), sep=None, engine="python")
+    cleaned_data = load_price_data(data)
+    S = float(cleaned_data["Last Price"].iloc[-1])
+
+    asset_class = _required_form_value("asset_class")
+    K = float(_required_form_value("K"))
+    current_date = _required_form_value("current_date")
+    expiration_date = _required_form_value("expiration_date")
+    r = float(_required_form_value("r"))
+    q = float(request.form.get("q", "0") or 0)
+    option_type = _required_form_value("option_type")
+    position = _required_form_value("position")
+
+    contracts = int(request.form.get("contracts", "1"))
+    multiplier = float(request.form.get("multiplier", "100"))
+    quantity = contracts * multiplier
+
+    actual_price = float(request.form.get("actual_price", "0"))
+    if actual_price < 0:
+        raise ValueError("Bloomberg option price cannot be negative.")
+
+    rf = None
+    if asset_class.lower() == "fx":
+        rf = float(_required_form_value("foreign_risk_free_rate"))
+
+    T = calculate_time_to_maturity(current_date, expiration_date)
+    volatility_method = _required_form_value("volatility_method")
+
+    iv_q = q
+    if asset_class.lower() == "fx":
+        iv_q = rf
+    elif asset_class.lower() == "futures":
+        iv_q = r
+
+    if volatility_method == "manual":
+        sigma = float(_required_form_value("volatility"))
+    elif volatility_method == "implied":
+        sigma = get_implied_volatility(
+            market_price=actual_price,
+            S=S, K=K, T=T, r=r, q=iv_q,
+            option_type=option_type,
+        )
+    else:
+        raise ValueError("Invalid volatility input method.")
+
+    leg = create_leg(
+        asset_class=asset_class, S=S, K=K,
+        current_date=current_date, expiration_date=expiration_date,
+        r=r, q=q, sigma=sigma, option_type=option_type,
+        position=position, quantity=quantity, rf=rf,
+        actual_price=actual_price,
+    )
+
+    leg = price_leg(leg)
+    leg["actual_price"] = actual_price
+    leg["risk_free_rate"] = r
+    leg["volatility_method"] = volatility_method
+    leg["current_date"] = current_date
+    leg["expiration_date"] = expiration_date
+    leg["contracts"] = contracts
+    leg["multiplier"] = multiplier
+    leg["mc_price"] = None
+    leg["garch_volatility"] = None
+
+    return leg, cleaned_data, historical_text
+
+
 # -------------------------------------------------------------------
 # MAIN DASHBOARD / REPORT GENERATOR
 # -------------------------------------------------------------------
@@ -52,99 +165,87 @@ def home():
     cleaned_data = None
     error = None
     leg = None
-    
+
     legs = session.get("legs", [])
     totals = session.get("totals", None)
+    historical_data_text = session.get("historical_data", "")
+    form_values = session.get("last_form_values", DEFAULT_FORM_VALUES.copy())
+    editing_index = session.get("editing_index", None)
 
     if request.method == "POST":
-        try:
-            action = request.form.get("action")
+        action = request.form.get("action")
+        if "historical_data" in request.form and request.form.get("historical_data", "").strip():
+            historical_data_text = request.form.get("historical_data", "")
+            session["historical_data"] = historical_data_text
 
+        try:
             if action == "clear":
                 session["legs"] = []
                 session["totals"] = None
                 session["report_ready"] = False
+                session["editing_index"] = None
                 session.modified = True
                 legs = []
                 totals = None
+                editing_index = None
 
             elif action == "add_leg":
-                historical_text = _required_form_value("historical_data")
-                data = pd.read_csv(StringIO(historical_text), sep=None, engine="python")
-                cleaned_data = load_price_data(data)
-                S = float(cleaned_data["Last Price"].iloc[-1])
-
-                asset_class = _required_form_value("asset_class")
-                K = float(_required_form_value("K"))
-                current_date = _required_form_value("current_date")
-                expiration_date = _required_form_value("expiration_date")
-                r = float(_required_form_value("r"))
-                q = float(request.form.get("q", "0") or 0)
-                option_type = _required_form_value("option_type")
-                position = _required_form_value("position")
-                
-                # UPDATED: Contract Size & Multiplier Math
-                contracts = int(request.form.get("contracts", "1"))
-                multiplier = float(request.form.get("multiplier", "100"))
-                quantity = contracts * multiplier 
-                
-                actual_price = float(request.form.get("actual_price", "0"))
-
-                if actual_price < 0:
-                    raise ValueError("Bloomberg option price cannot be negative.")
-
-                rf = None
-                if asset_class.lower() == "fx":
-                    rf = float(_required_form_value("foreign_risk_free_rate"))
-
-                T = calculate_time_to_maturity(current_date, expiration_date)
-
-                volatility_method = _required_form_value("volatility_method")
-
-                # Route the correct dividend yield (q) based on the asset class before solving IV
-                iv_q = q
-                if asset_class.lower() == "fx":
-                    iv_q = rf
-                elif asset_class.lower() == "futures":
-                    iv_q = r
-
-                if volatility_method == "manual":
-                    sigma = float(_required_form_value("volatility"))
-                elif volatility_method == "implied":
-                    sigma = get_implied_volatility(
-                        market_price=actual_price,
-                        S=S, K=K, T=T, r=r, q=iv_q,
-                        option_type=option_type,
-                    )
-                else:
-                    raise ValueError("Invalid volatility input method.")
-
-                leg = create_leg(
-                    asset_class=asset_class, S=S, K=K,
-                    current_date=current_date, expiration_date=expiration_date,
-                    r=r, q=q, sigma=sigma, option_type=option_type,
-                    position=position, quantity=quantity, rf=rf,
-                    actual_price=actual_price,
-                )
-
-                leg = price_leg(leg)
-                leg["actual_price"] = actual_price
-                leg["risk_free_rate"] = r
-                leg["volatility_method"] = volatility_method
-                leg["current_date"] = current_date
-                leg["expiration_date"] = expiration_date
-                
-                # Store display fields
-                leg["contracts"] = contracts
-                leg["multiplier"] = multiplier
-                
-                leg["mc_price"] = None
-                leg["garch_volatility"] = None
-
+                form_values = _extract_form_values(request.form)
+                session["last_form_values"] = form_values
+                leg, cleaned_data, historical_data_text = _build_priced_leg_from_form()
                 legs.append(leg)
                 session["legs"] = legs
                 session["totals"] = None
                 session["report_ready"] = False
+                session["editing_index"] = None
+                session.modified = True
+                totals = None
+                editing_index = None
+
+            elif action == "edit_leg":
+                idx = int(request.form.get("leg_index", -1))
+                if idx < 0 or idx >= len(legs):
+                    raise ValueError("Selected leg not found.")
+                editing_index = idx
+                form_values = _leg_to_form_values(legs[idx])
+                session["editing_index"] = editing_index
+                session["last_form_values"] = form_values
+                session.modified = True
+
+            elif action == "cancel_edit":
+                editing_index = None
+                session["editing_index"] = None
+                session.modified = True
+
+            elif action == "update_leg":
+                idx = int(request.form.get("edit_index", -1))
+                if idx < 0 or idx >= len(legs):
+                    raise ValueError("Selected leg not found.")
+                form_values = _extract_form_values(request.form)
+                session["last_form_values"] = form_values
+                leg, cleaned_data, historical_data_text = _build_priced_leg_from_form()
+                legs[idx] = leg
+                session["legs"] = legs
+                session["totals"] = None
+                session["report_ready"] = False
+                session["editing_index"] = None
+                session.modified = True
+                totals = None
+                editing_index = None
+
+            elif action == "delete_leg":
+                idx = int(request.form.get("leg_index", -1))
+                if idx < 0 or idx >= len(legs):
+                    raise ValueError("Selected leg not found.")
+                legs.pop(idx)
+                session["legs"] = legs
+                session["totals"] = None
+                session["report_ready"] = False
+                if editing_index == idx:
+                    editing_index = None
+                elif editing_index is not None and editing_index > idx:
+                    editing_index -= 1
+                session["editing_index"] = editing_index
                 session.modified = True
                 totals = None
 
@@ -153,11 +254,13 @@ def home():
                     raise ValueError("Add at least one option before calculating.")
 
                 historical_text = _required_form_value("historical_data")
-                historical_data = pd.read_csv(StringIO(historical_text), sep=None, engine="python")
-                cleaned_data = load_price_data(historical_data)
+                historical_data_text = historical_text
+                session["historical_data"] = historical_data_text
+                historical_df = pd.read_csv(StringIO(historical_text), sep=None, engine="python")
+                cleaned_data = load_price_data(historical_df)
 
                 strategy_result = price_strategy(
-                    historical_data=historical_data,
+                    historical_data=historical_df,
                     legs=legs,
                     n_paths=10000,
                     trading_days=252,
@@ -166,7 +269,7 @@ def home():
 
                 legs = strategy_result["legs"]
                 totals = strategy_result["totals"]
-                
+
                 session["legs"] = legs
                 session["totals"] = totals
                 session["spot_price"] = float(cleaned_data["Last Price"].iloc[-1])
@@ -177,9 +280,11 @@ def home():
                 if not legs or not totals:
                     raise ValueError("Calculate the strategy first.")
 
-                historical_text = _required_form_value("historical_data")
-                historical_data = pd.read_csv(StringIO(historical_text), sep=None, engine="python")
-                cleaned_data = load_price_data(historical_data)
+                historical_text = request.form.get("historical_data") or historical_data_text
+                if not historical_text or not historical_text.strip():
+                    raise ValueError("Missing form field: historical_data")
+                historical_df = pd.read_csv(StringIO(historical_text), sep=None, engine="python")
+                cleaned_data = load_price_data(historical_df)
 
                 strategy_result = {"legs": legs, "totals": totals}
                 REPORT_DIR.mkdir(exist_ok=True)
@@ -197,6 +302,8 @@ def home():
 
         except Exception as exc:
             error = str(exc)
+            if action in ("add_leg", "update_leg"):
+                form_values = _extract_form_values(request.form)
 
     return render_template(
         "index.html",
@@ -205,7 +312,9 @@ def home():
         leg=leg,
         legs=legs,
         totals=totals,
-        historical_data=request.form.get("historical_data", ""),
+        historical_data=historical_data_text,
+        form_values=form_values,
+        editing_index=editing_index,
         report_ready=session.get("report_ready", False),
     )
 

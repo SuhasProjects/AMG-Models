@@ -1,14 +1,15 @@
-@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=Montserrat:wght@200;300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Assistant:wght@300;400;600&family=Roboto:wght@300;400;500;700&display=swap');
 
 :root {
-    --amg-navy: #041435;
-    --amg-navy-hover: #082154;
-    --amg-slate-dark: #748b9f;
-    --amg-slate-light: #9fb2c2;
-    --amg-ice-bg: #eef3f7;
-    --border-gray: #d9e2ec;
-    --text-primary: #1a1a1a;
-    --text-muted: #5b6875;
+    --amg-navy: #002278;
+    --amg-navy-hover: #116dff;
+    --amg-sky-active: #b5daf7;
+    --amg-slate-dark: #002278;
+    --amg-slate-light: #6b88c9;
+    --amg-ice-bg: #f3f7fc;
+    --border-gray: #e2e2e2;
+    --text-primary: #414141;
+    --text-muted: #5f6360;
 }
 
 * {
@@ -18,19 +19,28 @@
 }
 
 body {
-    font-family: 'Montserrat', sans-serif;
-    background-color: #eaeff3; 
+    font-family: 'Roboto', 'Assistant', sans-serif;
+    font-weight: 300;
+    background-color: #f5f5f5;
     color: var(--text-primary);
-    padding-bottom: 80px;
+    padding-bottom: 60px;
+}
+
+html.embedded .top-nav {
+    display: none;
+}
+
+html.embedded body {
+    padding-top: 24px;
+    padding-bottom: 40px;
 }
 
 /* Header & Logo Bar */
 .top-nav {
     background: #ffffff;
     border-bottom: 1px solid var(--border-gray);
-    padding: 20px 40px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.02);
-    margin-bottom: 40px;
+    padding: 16px 40px;
+    margin-bottom: 32px;
 }
 
 .brand-container {
@@ -39,24 +49,23 @@ body {
     display: flex;
     align-items: center;
     justify-content: flex-start;
-    gap: 25px;
+    gap: 24px;
 }
 
 .amg-logo {
-    max-height: 125px; 
+    max-height: 95px;
     width: auto;
 }
 
 .header-title {
-    font-family: 'Montserrat', sans-serif;
-    font-size: 28px;
-    font-weight: 500;
-    text-transform: uppercase;
-    letter-spacing: 6px;
-    color: #111;
+    font-family: 'Roboto', sans-serif;
+    font-size: 24px;
+    font-weight: 300;
+    letter-spacing: 2px;
+    color: var(--amg-navy);
     margin: 0;
-    border-left: 2px solid var(--border-gray);
-    padding-left: 25px;
+    border-left: 1px solid var(--border-gray);
+    padding-left: 24px;
 }
 
 /* Container */
@@ -84,37 +93,39 @@ body {
 .card {
     background: #ffffff;
     border: 1px solid var(--border-gray);
-    border-radius: 3px;
-    padding: 36px;
-    margin-bottom: 30px;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06); 
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    border-radius: 0;
+    padding: 32px;
+    margin-bottom: 28px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.03);
+    transition: box-shadow 0.2s ease;
 }
 
 .card:hover {
-    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 6px 20px rgba(0, 34, 120, 0.06);
 }
 
 .card-slate {
-    background-color: var(--amg-slate-dark);
-    color: #ffffff;
-    border: none;
+    background-color: #ffffff;
+    color: var(--text-primary);
+    border: 1px solid var(--amg-navy);
 }
 
 .card-slate h2,
 .card-slate h3,
 .card-slate label {
-    color: #ffffff;
+    color: var(--amg-navy);
 }
 
 /* Card Headings */
 h2 {
-    font-size: 16px;
-    font-weight: 400;
-    text-transform: uppercase;
-    letter-spacing: 3px;
-    color: #111;
+    font-family: 'Roboto', sans-serif;
+    font-size: 20px;
+    font-weight: 300;
+    letter-spacing: 0.5px;
+    color: var(--amg-navy);
     margin-bottom: 22px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--amg-navy);
     display: flex;
     align-items: center;
     gap: 10px;
@@ -232,19 +243,25 @@ textarea {
 }
 
 .btn {
-    padding: 13px 28px;
+    padding: 12px 26px;
     border: none;
-    border-radius: 2px;
-    font-family: 'Montserrat', sans-serif;
-    font-size: 11px;
-    font-weight: 600;
+    border-radius: 0;
+    font-family: 'Roboto', sans-serif;
+    font-size: 12px;
+    font-weight: 500;
     text-transform: uppercase;
-    letter-spacing: 2px;
+    letter-spacing: 1.5px;
     cursor: pointer;
     transition: all 0.2s ease;
     text-decoration: none;
     text-align: center;
     display: inline-block;
+}
+
+.btn-sm {
+    padding: 6px 12px;
+    font-size: 11px;
+    letter-spacing: 1px;
 }
 
 .btn-primary {
@@ -254,16 +271,16 @@ textarea {
 
 .btn-primary:hover {
     background-color: var(--amg-navy-hover);
-    transform: translateY(-1px);
 }
 
 .btn-secondary {
-    background-color: var(--amg-slate-dark);
-    color: #ffffff;
+    background-color: #ffffff;
+    color: var(--amg-navy);
+    border: 1px solid var(--amg-navy);
 }
 
 .btn-secondary:hover {
-    background-color: #5d7589;
+    background-color: var(--amg-ice-bg);
 }
 
 .btn-danger {
@@ -276,6 +293,34 @@ textarea {
     background-color: #fff5f5;
     color: #b91c1c;
     border-color: #b91c1c;
+}
+
+.leg-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+}
+
+.leg-header h3 {
+    margin-bottom: 0;
+}
+
+.leg-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.editing-banner {
+    background-color: var(--amg-ice-bg);
+    border-left: 3px solid var(--amg-navy);
+    color: var(--amg-navy);
+    padding: 10px 14px;
+    font-size: 13px;
+    font-weight: 400;
+    margin-bottom: 20px;
 }
 
 /* Data Display Grids */
@@ -309,16 +354,16 @@ textarea {
 }
 
 .totals-item {
-    background: rgba(255, 255, 255, 0.12);
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: var(--amg-ice-bg);
+    border: 1px solid #d5e2f2;
 }
 
 .totals-item .data-label {
-    color: #dbe4ee;
+    color: var(--text-muted);
 }
 
 .totals-item .data-value {
-    color: #ffffff;
+    color: var(--amg-navy);
 }
 
 hr {

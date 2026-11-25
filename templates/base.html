@@ -10,12 +10,22 @@
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
     <!-- Official AMG Theme -->
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script>
+        (function () {
+            var params = new URLSearchParams(window.location.search);
+            var inIframe = false;
+            try { inIframe = window.self !== window.top; } catch (e) { inIframe = true; }
+            if (inIframe || params.get('embed') === '1') {
+                document.documentElement.classList.add('embedded');
+            }
+        })();
+    </script>
     
     <style>
-        /* Nav menu styles to perfectly blend into your old header */
+        /* Nav menu styles matching psuamg.com */
         .nav-menu {
             display: flex;
-            gap: 25px;
+            gap: 8px;
             margin-left: auto;
             list-style: none;
             margin-bottom: 0;
@@ -24,14 +34,16 @@
         }
         .nav-menu a {
             text-decoration: none;
-            color: var(--text-muted);
-            font-weight: 600;
-            font-size: 12px;
-            text-transform: uppercase;
-            letter-spacing: 1.5px;
-            transition: color 0.2s ease;
+            color: var(--amg-navy);
+            font-weight: 400;
+            font-size: 13px;
+            padding: 10px 16px;
+            letter-spacing: 0.4px;
+            transition: background-color 0.2s ease, color 0.2s ease;
         }
-        .nav-menu a:hover {
+        .nav-menu a:hover,
+        .nav-menu a.active {
+            background-color: var(--amg-sky-active);
             color: var(--amg-navy);
         }
         .main-content {
@@ -45,13 +57,13 @@
     <header class="top-nav">
         <div class="brand-container" style="display: flex; width: 100%; align-items: center;">
             <img src="{{ url_for('static', filename='AMG Logo.jpeg') }}" alt="AMG Logo" class="amg-logo">
-            <h1 class="header-title">Options Pricing Engine</h1>
+            <h1 class="header-title">Options Pricing</h1>
             
             <ul class="nav-menu">
-                <li><a href="/">Report Generator</a></li>
-                <li><a href="/pnl">PnL Viewer</a></li>
-                <li><a href="/greeks">Greek Sandbox</a></li>
-                <li><a href="/methodology">Methodology</a></li>
+                <li><a href="/" class="{{ 'active' if request.path == '/' else '' }}">Report Generator</a></li>
+                <li><a href="/pnl" class="{{ 'active' if request.path == '/pnl' else '' }}">PnL Viewer</a></li>
+                <li><a href="/greeks" class="{{ 'active' if request.path == '/greeks' else '' }}">Greek Sandbox</a></li>
+                <li><a href="/methodology" class="{{ 'active' if request.path == '/methodology' else '' }}">Methodology</a></li>
             </ul>
         </div>
     </header>

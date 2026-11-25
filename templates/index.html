@@ -19,93 +19,104 @@
 
             <div class="card">
                 <h2>
-                    Add Option Leg
+                    {% if editing_index is not none %}
+                        Edit Option Leg (Leg {{ editing_index + 1 }})
+                    {% else %}
+                        Add Option Leg
+                    {% endif %}
                     <span class="tooltip-icon" data-tooltip="Configure mechanical properties of an individual contract.">?</span>
                 </h2>
+
+                {% if editing_index is not none %}
+                    <div class="editing-banner">
+                        Editing <strong>Leg {{ editing_index + 1 }}</strong>. Update the fields below and click <strong>Save Leg Changes</strong>.
+                    </div>
+                    <input type="hidden" name="edit_index" value="{{ editing_index }}">
+                {% endif %}
                 
                 <div class="form-grid">
                     <div class="form-group">
                         <label for="asset_class">Underlying Asset:</label>
                         <select id="asset_class" name="asset_class">
-                            <option value="equity">Spot Equity / ETF</option>
-                            <option value="futures">Futures</option>
-                            <option value="fx">Foreign Exchange (FX)</option>
+                            <option value="equity" {{ 'selected' if form_values.asset_class == 'equity' else '' }}>Spot Equity / ETF</option>
+                            <option value="futures" {{ 'selected' if form_values.asset_class == 'futures' else '' }}>Futures</option>
+                            <option value="fx" {{ 'selected' if form_values.asset_class == 'fx' else '' }}>Foreign Exchange (FX)</option>
                         </select>
                     </div>
 
                     <div class="form-group">
                         <label for="option_type">Option Type:</label>
                         <select id="option_type" name="option_type">
-                            <option value="call">Call</option>
-                            <option value="put">Put</option>
+                            <option value="call" {{ 'selected' if form_values.option_type == 'call' else '' }}>Call</option>
+                            <option value="put" {{ 'selected' if form_values.option_type == 'put' else '' }}>Put</option>
                         </select>
                     </div>
 
                     <div class="form-group">
                         <label for="position">Position:</label>
                         <select id="position" name="position">
-                            <option value="long">Long</option>
-                            <option value="short">Short</option>
+                            <option value="long" {{ 'selected' if form_values.position == 'long' else '' }}>Long</option>
+                            <option value="short" {{ 'selected' if form_values.position == 'short' else '' }}>Short</option>
                         </select>
                     </div>
 
                     <div class="form-group">
                         <label>Number of Contracts:</label>
-                        <input type="number" name="contracts" value="1" min="1" required>
+                        <input type="number" name="contracts" value="{{ form_values.contracts }}" min="1" required>
                     </div>
                     
                     <div class="form-group">
                         <label>Contract Size (Multiplier):</label>
-                        <input type="number" name="multiplier" value="100" min="1" required>
+                        <input type="number" name="multiplier" value="{{ form_values.multiplier }}" min="1" required>
                     </div>
 
                     <div class="form-group">
                         <label for="current_date">Current Date:</label>
-                        <input type="date" id="current_date" name="current_date" required>
+                        <input type="date" id="current_date" name="current_date" value="{{ form_values.current_date }}" required>
                     </div>
 
                     <div class="form-group">
                         <label for="expiration_date">Expiration Date:</label>
-                        <input type="date" id="expiration_date" name="expiration_date" required>
+                        <input type="date" id="expiration_date" name="expiration_date" value="{{ form_values.expiration_date }}" required>
                     </div>
 
                     <div class="form-group">
                         <label for="strike">Strike (K):</label>
-                        <input type="number" id="strike" name="K" step="any" required>
+                        <input type="number" id="strike" name="K" step="any" value="{{ form_values.K }}" required>
                     </div>
 
                     <div class="form-group">
                         <label for="risk_free_rate">Risk-Free Rate (r):</label>
-                        <input type="number" id="risk_free_rate" name="r" step="any" required>
+                        <input type="number" id="risk_free_rate" name="r" step="any" value="{{ form_values.r }}" required>
                     </div>
 
                     <div class="form-group" id="foreign_rate_container" style="display: none;">
                         <label for="foreign_risk_free_rate">Foreign Risk-Free Rate:</label>
-                        <input type="number" id="foreign_risk_free_rate" name="foreign_risk_free_rate" step="0.0001" placeholder="0.04">
+                        <input type="number" id="foreign_risk_free_rate" name="foreign_risk_free_rate" step="0.0001" placeholder="0.04" value="{{ form_values.foreign_risk_free_rate }}">
                     </div>
 
                     <div class="form-group">
                         <label for="dividend_yield">Dividend Yield (q):</label>
-                        <input type="number" id="dividend_yield" name="q" step="any" value="0" required>
+                        <input type="number" id="dividend_yield" name="q" step="any" value="{{ form_values.q }}" required>
                     </div>
 
                     <div class="form-group">
                         <label>Bloomberg Price:</label>
-                        <input type="number" name="actual_price" min="0" step="any" required>
+                        <input type="number" name="actual_price" min="0" step="any" value="{{ form_values.actual_price }}" required>
                         <small style="font-size: 10px; color: var(--amg-navy); margin-top: 4px;">Enter Bid if selling, Ask if buying.</small>
                     </div>
 
                     <div class="form-group">
                         <label for="volatility_method">Volatility Input:</label>
                         <select id="volatility_method" name="volatility_method">
-                            <option value="manual">Manual IV Entry</option>
-                            <option value="implied">Solve Implied Volatility</option>
+                            <option value="manual" {{ 'selected' if form_values.volatility_method == 'manual' else '' }}>Manual IV Entry</option>
+                            <option value="implied" {{ 'selected' if form_values.volatility_method == 'implied' else '' }}>Solve Implied Volatility</option>
                         </select>
                     </div>
 
                     <div class="form-group" id="manual_iv">
                         <label for="volatility">Volatility (σ):</label>
-                        <input type="number" id="volatility" name="volatility" step="0.0001" placeholder="0.25" required>
+                        <input type="number" id="volatility" name="volatility" step="0.0001" placeholder="0.25" value="{{ form_values.volatility }}" required>
                     </div>
 
                     <div class="form-group" id="implied_iv" style="display: none; justify-content: center;">
@@ -114,8 +125,13 @@
                 </div>
 
                 <div class="button-group">
-                    <button type="submit" name="action" value="add_leg" class="btn btn-primary">Add Leg</button>
-                    <button type="submit" name="action" value="done" formnovalidate class="btn btn-secondary">Calculate Strategy</button>
+                    {% if editing_index is not none %}
+                        <button type="submit" name="action" value="update_leg" class="btn btn-primary">Save Leg Changes</button>
+                        <button type="submit" name="action" value="cancel_edit" formnovalidate class="btn btn-secondary">Cancel Edit</button>
+                    {% else %}
+                        <button type="submit" name="action" value="add_leg" class="btn btn-primary">Add Leg</button>
+                        <button type="submit" name="action" value="done" formnovalidate class="btn btn-secondary">Calculate Strategy</button>
+                    {% endif %}
                     <button type="submit" name="action" value="clear" formnovalidate class="btn btn-danger" onclick="return confirm('Clear all legs from strategy?');">Reset</button>
                 </div>
             </div>
@@ -170,7 +186,19 @@
                 
                 {% for leg in session["legs"] %}
                     <div style="margin-top: 24px;">
-                        <h3>Leg {{ loop.index }}: {{ leg["contracts"] }}x (Size: {{ leg["multiplier"] }})x {{ leg["position"]|title }} {{ leg["option_type"]|title }}</h3>
+                        <div class="leg-header">
+                            <h3>Leg {{ loop.index }}: {{ leg["contracts"] }}x (Size: {{ leg["multiplier"] }})x {{ leg["position"]|title }} {{ leg["option_type"]|title }}</h3>
+                            <div class="leg-actions">
+                                <form method="POST" style="display: inline;">
+                                    <input type="hidden" name="leg_index" value="{{ loop.index0 }}">
+                                    <button type="submit" name="action" value="edit_leg" class="btn btn-secondary btn-sm">Edit</button>
+                                </form>
+                                <form method="POST" style="display: inline;" onsubmit="return confirm('Remove Leg {{ loop.index }}?');">
+                                    <input type="hidden" name="leg_index" value="{{ loop.index0 }}">
+                                    <button type="submit" name="action" value="delete_leg" class="btn btn-danger btn-sm">Remove</button>
+                                </form>
+                            </div>
+                        </div>
                         
                         <div class="data-grid">
                             <div class="data-item"><div class="data-label">Asset</div><div class="data-value">{{ leg["asset_class"]|title }}</div></div>
@@ -209,8 +237,8 @@
     const manualIV = document.getElementById("manual_iv");
     const impliedIV = document.getElementById("implied_iv");
 
-    volatilityMethod.addEventListener("change", function() {
-        if (this.value === "manual") {
+    function updateVolatilityVisibility() {
+        if (volatilityMethod.value === "manual") {
             manualIV.style.display = "block";
             impliedIV.style.display = "none";
             document.getElementById("volatility").required = true;
@@ -219,7 +247,10 @@
             impliedIV.style.display = "flex";
             document.getElementById("volatility").required = false;
         }
-    });
+    }
+
+    volatilityMethod.addEventListener("change", updateVolatilityVisibility);
+    updateVolatilityVisibility();
 
     const assetClass = document.getElementById("asset_class");
     const foreignRateContainer = document.getElementById("foreign_rate_container");
