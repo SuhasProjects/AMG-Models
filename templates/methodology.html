@@ -8,87 +8,139 @@
       }
     };
 </script>
-<script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
 <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
 
 <style>
-    .amg-card { background-color: #ffffff; border: 1px solid #d1d5db; border-radius: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
-    .methodology-section { margin-bottom: 3rem; }
-    .methodology-section h3 { color: #001f3f; font-weight: 700; font-size: 1.5rem; border-bottom: 2px solid #e9ecef; padding-bottom: 0.5rem; margin-bottom: 1.25rem; }
-    .methodology-section h5 { color: #333; font-weight: 600; margin-top: 1.5rem; }
-    .math-block { background-color: #f8f9fa; padding: 1.5rem; border-radius: 4px; border-left: 4px solid #878acd; margin: 1.5rem 0; overflow-x: auto; font-size: 1.1rem;}
-    .text-content { color: #495057; line-height: 1.7; font-size: 1.05rem; }
-    
-    .input-grid { display: grid; grid-template-columns: 1fr; gap: 1rem; margin-top: 1.5rem; }
-    @media (min-width: 768px) { .input-grid { grid-template-columns: 1fr 1fr; } }
-    .input-card { border: 1px solid #e9ecef; border-radius: 4px; padding: 1rem; background-color: #fcfcfc; }
-    .input-card h6 { color: #001f3f; font-weight: 700; margin-bottom: 0.5rem; }
+    .methodology-wrap {
+        max-width: 1050px;
+    }
+    .text-content {
+        color: var(--text-primary);
+        line-height: 1.7;
+        font-size: 14px;
+        font-weight: 300;
+        margin-bottom: 14px;
+    }
+    .text-content:last-child {
+        margin-bottom: 0;
+    }
+    .text-content strong {
+        font-weight: 500;
+        color: #111111;
+    }
+    .math-block {
+        background-color: #ffffff;
+        padding: 18px 22px;
+        border: 1px solid var(--border-gray);
+        border-left: 3px solid var(--amg-navy);
+        margin: 18px 0;
+        overflow-x: auto;
+        font-size: 15px;
+        color: var(--amg-navy);
+    }
+    .input-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 14px;
+        margin-top: 14px;
+    }
+    @media (min-width: 768px) {
+        .input-grid {
+            grid-template-columns: 1fr 1fr;
+        }
+    }
+    .input-card {
+        background-color: #ffffff;
+        border: 1px solid var(--border-gray);
+        padding: 16px 18px;
+    }
+    .input-card h4 {
+        margin-top: 0;
+        margin-bottom: 8px;
+        color: var(--amg-navy);
+        font-size: 12px;
+        font-weight: 600;
+        letter-spacing: 1px;
+        text-transform: uppercase;
+    }
 </style>
 
-<div class="row justify-content-center">
-    <div class="col-lg-10">
-        <div class="amg-card p-4 p-md-5 mb-5">
-            <h1 class="mb-4" style="color: #001f3f; font-weight: 800;">Engine Methodology</h1>
-            <p class="text-content lead mb-5">The report generator uses the standard Black-Scholes-Merton model to calculate the relevant greeks, and a GARCH-model Monte Carlo simulation to account for how volatility actually behaves in live markets.</p>
+<div class="methodology-wrap">
+    <div class="card">
+        <h2>Overview</h2>
+        <p class="text-content" style="font-size: 15px;">
+            The report generator uses the standard Black-Scholes-Merton model to calculate the relevant Greeks, and a GARCH-model Monte Carlo simulation to account for how volatility actually behaves in live markets.
+        </p>
+    </div>
 
-            <!-- Section 1: BSM -->
-            <div class="methodology-section">
-                <h3>1. Black-Scholes-Merton (The Intuition)</h3>
-                <p class="text-content">Black-Scholes-Merton (BSM) is the industry standard for pricing options. While the math looks intimidating, it is essentially an expected value calculation. It calculates what the option payout will probably be at expiration multiplied by the probability of it finishing in-the-money, and discounts that cash back to today.</p>
-                
-                <div class="math-block">
-                    $$ C = S_0 e^{-qT} N(d_1) - K e^{-rT} N(d_2) $$
-                </div>
-                
-                <p class="text-content">Think of $N(d_1)$ as the <strong>Delta</strong> (how much the option acts like the underlying stock), and $N(d_2)$ as the literal <strong>probability</strong> that the option finishes in the money. </p>
+    <!-- Section 1: BSM -->
+    <div class="card">
+        <h2>1. Black-Scholes-Merton (The Intuition)</h2>
+        <p class="text-content">
+            Black-Scholes-Merton (BSM) is the industry standard for pricing options. While the math looks intimidating, it is essentially an expected value calculation. It calculates what the option payout will probably be at expiration multiplied by the probability of it finishing in-the-money, and discounts that cash back to today.
+        </p>
 
-                <h5 class="mt-4 mb-3">How The 5 Inputs Drive the Price</h5>
-                <div class="input-grid">
-                    <div class="input-card">
-                        <h6>1. Spot Price ($S_0$)</h6>
-                        <p class="text-content mb-0" style="font-size: 0.95rem;"><strong>Logic:</strong> If you hold a Call option (the right to buy), a higher current stock price makes your locked-in strike price much more valuable.</p>
-                    </div>
-                    <div class="input-card">
-                        <h6>2. Strike Price ($K$)</h6>
-                        <p class="text-content mb-0" style="font-size: 0.95rem;"><strong>Logic:</strong> A higher strike price makes a Call option cheaper, since the underlying has to move to a higher price in order to be profitable</p>
-                    </div>
-                    <div class="input-card">
-                        <h6>3. Time to Expiration ($T$)</h6>
-                        <p class="text-content mb-0" style="font-size: 0.95rem;"><strong>Logic:</strong> More time = higher option value. The longer the option lasts, the more time there is for the stock to make a massive, profitable move.</p>
-                    </div>
-                    <div class="input-card">
-                        <h6>4. Implied Volatility ($\sigma$)</h6>
-                        <p class="text-content mb-0" style="font-size: 0.95rem;"><strong>Logic:</strong> Options have capped downside (you can only lose your premium) but unlimited upside. High volatility means wild swings. Because your losses are capped but your gains aren't, wilder swings make the option significantly more valuable.</p>
-                    </div>
-                    <div class="input-card" style="grid-column: 1 / -1;">
-                        <h6>5. Risk-Free Rate ($r$)</h6>
-                        <p class="text-content mb-0" style="font-size: 0.95rem;"><strong>Logic:</strong> A Call option allows you to gain exposure to the underlying despite not having to pay the strike price until expiration. If interest rates are high, keeping that cash in the bank to earn interest is very valuable. Therefore, higher rates make Call options slightly more expensive.</p>
-                    </div>
-                </div>
+        <div class="math-block">
+            $$ C = S_0 e^{-qT} N(d_1) - K e^{-rT} N(d_2) $$
+        </div>
+
+        <p class="text-content">
+            Think of $N(d_1)$ as the <strong>Delta</strong> (how much the option acts like the underlying stock), and $N(d_2)$ as the literal <strong>probability</strong> that the option finishes in the money.
+        </p>
+
+        <h4>How The 5 Inputs Drive the Price</h4>
+        <div class="input-grid">
+            <div class="input-card">
+                <h4>1. Spot Price ($S_0$)</h4>
+                <p class="text-content"><strong>Logic:</strong> If you hold a Call option (the right to buy), a higher current stock price makes your locked-in strike price much more valuable.</p>
             </div>
-
-            <!-- Section 2: GARCH -->
-            <div class="methodology-section">
-                <h3>2. GARCH (Real-World Volatility)</h3>
-                <p class="text-content">The biggest flaw in the BSM model is that it assumes volatility ($\sigma$) is constant over time. Anyone who has traded knows this is false. Markets experience <em>volatility clustering</em>: calm days are followed by calm days, and massive crashes are followed by massive aftershocks.</p>
-                
-                <div class="math-block">
-                    $$ \sigma_t^2 = \omega + \alpha \epsilon_{t-1}^2 + \beta \sigma_{t-1}^2 $$
-                </div>
-                
-                <p class="text-content">This model aims to account for the BSM flaw by using the <strong>GARCH</strong> model. GARCH updates the volatility forecast every single day by looking at three things: the long-term average ($\omega$), yesterday's market shock ($\alpha$), and yesterday's variance ($\beta$). If the market tanks today, GARCH automatically spikes the volatility for tomorrow.</p>
+            <div class="input-card">
+                <h4>2. Strike Price ($K$)</h4>
+                <p class="text-content"><strong>Logic:</strong> A higher strike price makes a Call option cheaper, since the underlying has to move to a higher price in order to be profitable.</p>
             </div>
-
-            <!-- Section 3: Monte Carlo -->
-            <div class="methodology-section">
-                <h3>3. Monte Carlo Simulation</h3>
-                <p class="text-content">Because GARCH means our volatility is changing every single day, we can no longer use a simple formula like BSM. Instead, we have to simulate the path of the underlying using computers.</p>
-                
-                <p class="text-content">The engine runs a <strong>Monte Carlo simulation</strong>. It generates 10,000 distinct, random future paths for the asset's price between today and expiration. At every single daily step, it uses the estimated GARCH volatility to determine how volatile the stock will likely be on the next day.</p>
-                
-                <p class="text-content">By calculating the exact payout of your multi-leg strategy across all 10,000 simulated realities and averaging the results, the model creates a theoretical price that accounts for dynamic market conditions, creating a realistic theoretic value.</p>
+            <div class="input-card">
+                <h4>3. Time to Expiration ($T$)</h4>
+                <p class="text-content"><strong>Logic:</strong> More time = higher option value. The longer the option lasts, the more time there is for the stock to make a massive, profitable move.</p>
+            </div>
+            <div class="input-card">
+                <h4>4. Implied Volatility ($\sigma$)</h4>
+                <p class="text-content"><strong>Logic:</strong> Options have capped downside (you can only lose your premium) but unlimited upside. High volatility means wild swings. Because your losses are capped but your gains aren't, wilder swings make the option significantly more valuable.</p>
+            </div>
+            <div class="input-card" style="grid-column: 1 / -1;">
+                <h4>5. Risk-Free Rate ($r$)</h4>
+                <p class="text-content"><strong>Logic:</strong> A Call option allows you to gain exposure to the underlying despite not having to pay the strike price until expiration. If interest rates are high, keeping that cash in the bank to earn interest is very valuable. Therefore, higher rates make Call options slightly more expensive.</p>
             </div>
         </div>
+    </div>
+
+    <!-- Section 2: GARCH -->
+    <div class="card">
+        <h2>2. GARCH (Real-World Volatility)</h2>
+        <p class="text-content">
+            The biggest flaw in the BSM model is that it assumes volatility ($\sigma$) is constant over time. Anyone who has traded knows this is false. Markets experience <em>volatility clustering</em>: calm days are followed by calm days, and massive crashes are followed by massive aftershocks.
+        </p>
+
+        <div class="math-block">
+            $$ \sigma_t^2 = \omega + \alpha \epsilon_{t-1}^2 + \beta \sigma_{t-1}^2 $$
+        </div>
+
+        <p class="text-content">
+            This model aims to account for the BSM flaw by using the <strong>GARCH</strong> model. GARCH updates the volatility forecast every single day by looking at three things: the long-term average ($\omega$), yesterday's market shock ($\alpha$), and yesterday's variance ($\beta$). If the market tanks today, GARCH automatically spikes the volatility for tomorrow.
+        </p>
+    </div>
+
+    <!-- Section 3: Monte Carlo -->
+    <div class="card">
+        <h2>3. Monte Carlo Simulation</h2>
+        <p class="text-content">
+            Because GARCH means our volatility is changing every single day, we can no longer use a simple formula like BSM. Instead, we have to simulate the path of the underlying using computers.
+        </p>
+        <p class="text-content">
+            The engine runs a <strong>Monte Carlo simulation</strong>. It generates 10,000 distinct, random future paths for the asset's price between today and expiration. At every single daily step, it uses the estimated GARCH volatility to determine how volatile the stock will likely be on the next day.
+        </p>
+        <p class="text-content">
+            By calculating the exact payout of your multi-leg strategy across all 10,000 simulated realities and averaging the results, the model creates a theoretical price that accounts for dynamic market conditions, creating a realistic theoretical value.
+        </p>
     </div>
 </div>
 {% endblock %}
