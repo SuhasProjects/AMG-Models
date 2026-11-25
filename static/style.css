@@ -21,7 +21,7 @@
 body {
     font-family: 'Roboto', 'Assistant', sans-serif;
     font-weight: 300;
-    background-color: #f5f5f5;
+    background-color: #ffffff;
     color: var(--text-primary);
     padding-bottom: 60px;
 }
@@ -31,8 +31,24 @@ html.embedded .top-nav {
 }
 
 html.embedded body {
-    padding-top: 24px;
+    padding-top: 12px;
     padding-bottom: 40px;
+}
+
+.page-heading {
+    margin-bottom: 28px;
+}
+
+.page-heading h1 {
+    font-family: 'Roboto', 'Assistant', sans-serif;
+    font-size: 36px;
+    font-weight: 300;
+    color: var(--amg-navy);
+    letter-spacing: 0.5px;
+    margin: 0;
+    display: inline-block;
+    padding-bottom: 8px;
+    border-bottom: 1.5px solid var(--amg-navy);
 }
 
 /* Header & Logo Bar */
@@ -91,21 +107,21 @@ html.embedded body {
 
 /* Cards */
 .card {
-    background: #ffffff;
+    background: #f5f5f5;
     border: 1px solid var(--border-gray);
     border-radius: 0;
     padding: 32px;
     margin-bottom: 28px;
-    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.03);
-    transition: box-shadow 0.2s ease;
+    box-shadow: none;
+    transition: border-color 0.2s ease;
 }
 
 .card:hover {
-    box-shadow: 0 6px 20px rgba(0, 34, 120, 0.06);
+    border-color: #cbd5e1;
 }
 
 .card-slate {
-    background-color: #ffffff;
+    background-color: #f5f5f5;
     color: var(--text-primary);
     border: 1px solid var(--amg-navy);
 }
@@ -332,10 +348,10 @@ textarea {
 }
 
 .data-item {
-    background: #f8fafc;
+    background: #ffffff;
     padding: 12px 14px;
     border: 1px solid var(--border-gray);
-    border-radius: 2px;
+    border-radius: 0;
 }
 
 .data-label {

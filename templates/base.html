@@ -61,14 +61,25 @@
             
             <ul class="nav-menu">
                 <li><a href="/" class="{{ 'active' if request.path == '/' else '' }}">Report Generator</a></li>
-                <li><a href="/pnl" class="{{ 'active' if request.path == '/pnl' else '' }}">PnL Viewer</a></li>
-                <li><a href="/greeks" class="{{ 'active' if request.path == '/greeks' else '' }}">Greek Sandbox</a></li>
+                <li><a href="/pnl" class="{{ 'active' if request.path == '/pnl' else '' }}">P/L Visualizer</a></li>
+                <li><a href="/greeks" class="{{ 'active' if request.path == '/greeks' else '' }}">Greeks Sandbox</a></li>
                 <li><a href="/methodology" class="{{ 'active' if request.path == '/methodology' else '' }}">Methodology</a></li>
             </ul>
         </div>
     </header>
     
     <div class="main-content">
+        {% set page_titles = {
+            '/': 'Report Generator',
+            '/pnl': 'P/L Visualizer',
+            '/greeks': 'Greeks Sandbox',
+            '/methodology': 'Methodology'
+        } %}
+        {% if request.path in page_titles %}
+            <div class="page-heading">
+                <h1>{{ page_titles[request.path] }}</h1>
+            </div>
+        {% endif %}
         {% block content %}{% endblock %}
     </div>
 </body>
